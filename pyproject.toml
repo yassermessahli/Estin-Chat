@@ -1,0 +1,28 @@
+[project]
+name = "estin-chatbot"
+version = "1.0"
+description = "A RAG-based chatbot for ESTIN students, built by ESTIN students"
+readme = "README.md"
+requires-python = ">=3.12"
+license = {file = "LICENCE"}
+authors = [
+    {name = "Yasser Messahli", email = "y_messahli@estin.dz"},
+    {name = "Anis Besmail", email = "a_bensmail@estin.dz"},
+    {name = "Melissa Ghemari", email = "m_ghemari@estin.dz"},
+]
+maintainers = [
+    {name = "Faical Azouaou", email = "azouaou@estin.dz"},
+    {name = "Ahror Belaid", email = "belaid@estin.dz"},
+]
+dependencies = [
+    "python-dotenv>=1.0.0"
+]
+
+
+[dependency-groups]
+rag-app = []
+data-pipeline = [
+    "pymupdf>=1.26.1",
+]
+docs = []
+tests = []
