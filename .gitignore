@@ -1,0 +1,18 @@
+# environment variables
+.env
+
+# python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Cython debug symbols
+*.so
+*.dylib
+
+# uv lock files
+uv.lock
+
+# virtual environment
+.venv/
