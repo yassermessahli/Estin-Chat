@@ -15,14 +15,17 @@ maintainers = [
     {name = "Ahror Belaid", email = "belaid@estin.dz"},
 ]
 dependencies = [
-    "python-dotenv>=1.0.0"
+    "python-dotenv>=1.0.0",
 ]
 
 
 [dependency-groups]
-rag-app = []
+rag = []
 data-pipeline = [
     "pymupdf>=1.26.1",
 ]
 docs = []
 tests = []
+data-pipelie = [
+    "pymupdf>=1.26.1",
+]

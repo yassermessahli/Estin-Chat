@@ -16,3 +16,7 @@ uv.lock
 
 # virtual environment
 .venv/
+
+# files for testing
+1CP_S1_ELEC_COURS_2022_MEDJOUDJE_CHAPITRE2-Notations Complexes.pdf
+1CP_S1_ELEC_COURS_2022_MEDJOUDJE_CHAPITRE2-Notations Complexes_extracted.json
