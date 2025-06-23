@@ -22,10 +22,8 @@ dependencies = [
 [dependency-groups]
 rag = []
 data-pipeline = [
+    "ollama>=0.5.1",
     "pymupdf>=1.26.1",
 ]
 docs = []
 tests = []
-data-pipelie = [
-    "pymupdf>=1.26.1",
-]
