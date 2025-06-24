@@ -4,7 +4,12 @@ import json
 import time
 import argparse
 
-from load.pdf_loader import PDFLoader
+
+# Find the pdf_loader.py file relative to this script's location
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+sys.path.insert(0, parent_dir)
+from pdf_loader import PDFLoader
 
 
 def main():
