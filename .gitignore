@@ -23,3 +23,7 @@ uv.lock
 
 # outputs
 outputs/
+
+# other files
+tmp.py
+sample-data
