@@ -3,7 +3,7 @@ import csv
 import datetime
 
 # === Config ===
-BASE_DIR = "/home/estin/rag_data_pipeline/data_raw/1CP"
+BASE_DIR = "/home/estin/rag_data_pipeline/data_raw/"
 OUTPUT_FILE ="/home/estin/rag_data_pipeline/index.csv"
 
 
@@ -15,9 +15,12 @@ columns = [
     "type",              # file extension
     "last_modified",     # last modified date
     "status",            # "included" or "ignored"
+    "level",             # 1CP, 2CP, etc.
     "module",            # ALG1, BW...
     "doc_type",          # TD, TP, COURS, etc.
     "year",              # extracted year
+    "renamed_path",
+
     "organized_path",    # where it was moved in data_organized
     "cleaned",           # yes / no
     "chunked",           # yes / no
@@ -46,9 +49,11 @@ for root, _, files in os.walk(BASE_DIR):
             "type": file_type,
             "last_modified": last_modified,
             "status": "included",       # default is included
+            "level":"",
             "module": "",
             "doc_type": "",
             "year": "",
+            "renamed_path": "",
             "organized_path": "",
             "cleaned": "no",
             "chunked": "no",

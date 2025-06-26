@@ -6,8 +6,8 @@ import shutil
 from pathlib import Path
 
 # === Configuration ===
-CLEAN_DIR = "/home/estin/rag_data_pipeline/data_clean/1CP"
-RENAMED_DIR = "/home/estin/rag_data_pipeline/data_renamed/1CP"
+CLEAN_DIR = "/home/estin/rag_data_pipeline/data_clean"
+RENAMED_DIR = "/home/estin/rag_data_pipeline/data_renamed"
 INDEX_FILE = "/home/estin/rag_data_pipeline/index.csv"
 
 module_map = {
@@ -26,6 +26,23 @@ module_map = {
     "English 2": "ENG2",
     "Mécanique du point": "MEC",
     "Techniques d'expression": "TECX",
+    # 2CP – S1
+    "Algebra 3": "ALG3",
+    "Analyse Mathématique 3": "ANA3",
+    "Architecture des Ordinateurs 2": "ARCHI2",
+    "Économie": "ECON",
+    "Electronique Fondamentale 2": "ELECTRO2",
+    "Probabilités et Statistiques 1": "PROBA1",
+    "Structure Fichiers et Structure de Données": "SFSD",
+
+    # 2CP – S2
+    "Analyse Mathématique 4": "ANA4",
+    "Introduction aux systèmes d'information": "SI",
+    "Logique Mathématique": "LOG",
+    "Optique et Ondes électromagnétiques": "OOE",
+    "Probabilités et Statistiques 2": "PROBA2",
+    "Programmation Orientée Objet (POO, OOP)": "POO",
+    "Projet Pluridisciplinaire": "PRJP",
 }
 
 # === Helpers ===
@@ -89,7 +106,7 @@ for row in index_rows:
     title = os.path.splitext(os.path.basename(cleaned_path))[0]
     path_parts = Path(cleaned_path).parts
 
-    level = next((p for p in path_parts if "1cp" in p.lower()), "1CP")
+    level = next((p for p in path_parts if re.fullmatch(r"\d+(cp|cs)", p.lower())), "UNKNOWN")
     semester = next((p for p in path_parts if re.fullmatch(r"s[12]", p.lower())), "S?")
     module_abbr = fuzzy_find_module(path_parts)
     doc_type = normalize_type("/".join(path_parts))
@@ -112,6 +129,7 @@ for row in index_rows:
     # Update index fields
     row["file_name"] = new_filename
     row["renamed_path"] = renamed_path
+    row["level"] = level
     row["module"] = module_abbr
     row["doc_type"] = doc_type
     row["year"] = year
@@ -126,4 +144,4 @@ with open(INDEX_FILE, mode='w', newline='', encoding='utf-8') as f:
     writer.writeheader()
     writer.writerows(updated_rows)
 
-print(f"✅ {renamed_count} files copied into data_renamed/1CP with structured names and index updated.")
+print(f"✅ {renamed_count} files copied into data_renamed with structured names and index updated.")
