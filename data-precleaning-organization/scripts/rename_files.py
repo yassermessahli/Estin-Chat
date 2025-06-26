@@ -91,6 +91,25 @@ module_map = {
     "SA": "SA",
     "SC": "SC",
     "TNO": "TNO",
+
+    # 3CS – S1 (CS)
+    "Anonymisation des Données": "AD",
+    "Gestion de la confiance": "GC",
+    "Hacking éthique": "HE",
+    "Polytique de sécurité": "PS",  
+    "Sécurité des logiciels": "SL",
+    "Sécurité liée aux infrastructures": "SLI",
+    "Technique d'intrusion et défense": "TID"
+
+    # 3CS – S1 (IA)
+    "BI": "BI",
+    "DL": "DL",
+    "Ethics in AI": "EAI",  
+    "NLP": "NLP",
+    "NoSQL": "NoSQL",
+    "RFAI": "RFAI",
+    "RL": "RL"
+
 }
 
 # === Helpers ===
