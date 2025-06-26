@@ -43,6 +43,54 @@ module_map = {
     "Probabilités et Statistiques 2": "PROBA2",
     "Programmation Orientée Objet (POO, OOP)": "POO",
     "Projet Pluridisciplinaire": "PRJP",
+    # 1CS – S1
+    "ANG": "ANG",
+    "BDD": "BDD",
+    "GL": "GL",
+    "PAFA": "PAFA",
+    "RO1": "RO1",
+    "RX1": "RX1",
+    "SE": "SE",
+    "ThL": "ThL",
+
+    # 1CS – S2
+    "ADCI": "ADCI",
+    "ANUM": "ANUM",
+    "Entreprenariat": "ENT",
+    "IA": "IA",
+    "MF": "MF",
+    "RO2": "RO2",
+    "RX2": "RX2",
+    "SEC": "SEC",
+    # 2CS – S1
+    "ANAD": "ANAD",
+    "BDDA": "BDDA",
+    "Cloud": "CLOUD",
+    "Complexité": "CMPLX",
+    "DS": "DS",
+    "EN": "EN",
+    "GL": "GL",
+    "Projet": "PRJT",
+
+    # 2CS – S2 (CS)
+    "Administration Systèmes et réseaux": "ADSR",
+    "Audit de la sécurité des système d_information": "AUDSEC",
+    "Biométrie": "BIOM",
+    "Cryptographie avancée": "CRYPTO",
+    "Méthodes formelles pour la sécurité": "MF",
+    "ML": "ML",
+    "Sécurités des réseaux": "SR",
+    "Sécurités des systèmes d'exploitation": "SECSE",
+
+    # 2CS – S2 (IA)
+    "BDD": "BDD",
+    "BIGDATA": "BIGDATA",
+    "BTI": "BTI",
+    "IGC": "IGC",
+    "ML": "ML",
+    "SA": "SA",
+    "SC": "SC",
+    "TNO": "TNO",
 }
 
 # === Helpers ===
@@ -82,6 +130,15 @@ def extract_year(path):
     match = re.search(r"20\d{2}", path)
     return match.group(0) if match else None
 
+def extract_specialty(path_parts):
+    """Extract specialty from semester notation like S2(AI), S2(CS)"""
+    for part in path_parts:
+        # Look for patterns like S1(AI), S2(CS), etc.
+        match = re.search(r"s[12]\(([A-Z]+)\)", part.lower())
+        if match:
+            return match.group(1).upper()
+    return None
+
 def clean_filename(name):
     name = re.sub(r"\s+", "-", name)
     name = re.sub(r"[^\w\-]", "", name)
@@ -108,15 +165,22 @@ for row in index_rows:
 
     level = next((p for p in path_parts if re.fullmatch(r"\d+(cp|cs)", p.lower())), "UNKNOWN")
     semester = next((p for p in path_parts if re.fullmatch(r"s[12]", p.lower())), "S?")
+    specialty = extract_specialty(path_parts)
     module_abbr = fuzzy_find_module(path_parts)
     doc_type = normalize_type("/".join(path_parts))
     year = extract_year("/".join(path_parts))
     cleaned_title = clean_filename(title)
 
-    if year:
-        new_filename = f"{level}_{semester}_{module_abbr}_{doc_type}_{year}_{cleaned_title}{ext}"
+    # Build filename with specialty if present
+    if specialty:
+        level_semester = f"{level}_{semester}({specialty})"
     else:
-        new_filename = f"{level}_{semester}_{module_abbr}_{doc_type}_{cleaned_title}{ext}"
+        level_semester = f"{level}_{semester}"
+
+    if year:
+        new_filename = f"{level_semester}_{module_abbr}_{doc_type}_{year}_{cleaned_title}{ext}"
+    else:
+        new_filename = f"{level_semester}_{module_abbr}_{doc_type}_{cleaned_title}{ext}"
 
     # Rebuild relative structure
     relative_path = os.path.relpath(cleaned_path, CLEAN_DIR)
@@ -130,6 +194,8 @@ for row in index_rows:
     row["file_name"] = new_filename
     row["renamed_path"] = renamed_path
     row["level"] = level
+    row["semester"] = semester
+    row["specialty"] = specialty if specialty else ""
     row["module"] = module_abbr
     row["doc_type"] = doc_type
     row["year"] = year
