@@ -1,3 +1,3 @@
 # Estin Chatbot
 
-made by Estin students of Estin students
+made by Estin students for Estin students
