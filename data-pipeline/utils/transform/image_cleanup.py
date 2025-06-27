@@ -1,4 +1,4 @@
-﻿from model import Model
+﻿from .model import Model
 import base64
 from pathlib import Path
 

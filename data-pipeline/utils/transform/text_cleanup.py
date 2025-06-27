@@ -1,4 +1,4 @@
-﻿from model import Model
+﻿from .model import Model
 
 
 class TextCleanup:
@@ -10,24 +10,24 @@ class TextCleanup:
     def _build_prompt(self):
         return f"""
 ## Your task:
-You are given the raw text extracted from a PDF document that contains some noises and formatting issues. Your task is to clean it and format it for vector database populating by following the next steps:
+You are given the raw text extracted from a PDF document that contains some noises and formatting issues. Your task is to clean it and format it for vector storing by following the next steps:
 1. text understanding
 1. cleaning
 2. summarizing
-3. standardizing to paragraphs format with two endlines between each paragraph
+3. standardizing to paragraphs format
 
 ## remarks:
-- try to make the output a plain text.
-- consider formatting the math expressions.
+- consider reformatting the math expressions.
 - content may be in english or french, output should be exclusively in english.
 - try to keep the original expression and meaning of the text. 
 - put the summary directly, no introductions from you.
-- it may contains headers and footers, you should ignore them and concider only the main content.
+- it may contains headers and footers and authors names, you should ignore them and consider only the main content.
+- the output should be in paragraphs separated by an empty line. each paragraph composed of setences separated by dots.
 
 ## The text:
 {self.text}
 
-## The output:
+## Your output:
         """
 
     def process(self):

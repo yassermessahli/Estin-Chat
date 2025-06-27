@@ -15,6 +15,10 @@ maintainers = [
     {name = "Ahror Belaid", email = "belaid@estin.dz"},
 ]
 dependencies = [
+    "langchain>=0.3.26",
+    "langchain-community>=0.3.26",
+    "langchain-core>=0.3.66",
+    "langchain-text-splitters>=0.3.8",
     "python-dotenv>=1.0.0",
 ]
 
@@ -23,7 +27,7 @@ dependencies = [
 rag = []
 data-pipeline = [
     "ollama>=0.5.1",
-    "pymupdf>=1.26.1",
+    "pymupdf>=1.26.1"
 ]
 docs = []
 tests = []
