@@ -38,4 +38,4 @@ You are given the raw text extracted from a PDF document that contains some nois
             },
             {"role": "user", "content": self.instruction},
         ]
-        return self.model.generate(messages)
+        return self.model.generate(messages).messages[0].content

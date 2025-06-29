@@ -45,4 +45,4 @@ The image represents ...
                 "images": [self.image_data["base64"]],  # Add the base64 image data here
             },
         ]
-        return self.model.generate(messages)
+        return self.model.generate(messages).message.content
