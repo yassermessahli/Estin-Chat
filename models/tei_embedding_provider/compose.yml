@@ -1,7 +1,7 @@
 ﻿services:
   tei:
     # the official cpu-supported image
-    image: ghcr.io/huggingface/text-embeddings-inference:cpu-1.7 
+    image: ghcr.io/huggingface/text-embeddings-inference:cpu-1.7
 
     container_name: ${CONTAINER_NAME}
 
@@ -10,12 +10,21 @@
 
     volumes:
       # to store model files and other data
-      - ${VOLUME_PATH}:/data 
+      - ${VOLUME_PATH}:/data
 
     # Load all variables from the .env file directly into the container's environment.
     # The text-embeddings-inference server will automatically pick them up.
     env_file:
       - .env
+
+    healthcheck:
+      # Check the health of the service.
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 300s
+      timeout: 10s
+      retries: 3
+      # Time to start and load the model before starting checks.
+      start_period: 300s
 
     # Ensures the container restarts automatically if it fails
     restart: unless-stopped
