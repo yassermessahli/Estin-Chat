@@ -28,7 +28,7 @@ schema.add_field(
     field_name="id", datatype=DataType.INT64, is_primary=True, auto_id=True
 )
 schema.add_field(field_name="chunk", datatype=DataType.VARCHAR, max_length=512)
-schema.add_field(field_name="vector", datatype=DataType.FLOAT_VECTOR, dim=768)
+schema.add_field(field_name="vector", datatype=DataType.FLOAT_VECTOR, dim=1024)
 schema.add_field(field_name="level", datatype=DataType.VARCHAR, max_length=3)
 schema.add_field(field_name="semester", datatype=DataType.VARCHAR, max_length=2)
 schema.add_field(field_name="year_of_study", datatype=DataType.INT16)
@@ -53,21 +53,19 @@ schema.add_field(
     enable_match=True,
 )
 
-# [NOTE] Should uncomment the following lines after deploying TEI service
 
 # Add embedding function
-# embedding_function = Function(
-#     name="custom-embedding",
-#     function_type=FunctionType.TEXTEMBEDDING,
-#     input_field_names=["chunk"],
-#     output_field_names=["vector"],
-#     params={
-#         "provider": "TEI",
-#         "endpoint": os.getenv("EMBEDDING_ENDPOINT"),  # container endpoint
-#         "model_name": os.getenv("EMBEDDING_MODEL_NAME"),  # embedding model name
-#     },
-# )
-# schema.add_function(embedding_function)
+embedding_function = Function(
+    name="e5-embedding",
+    function_type=FunctionType.TEXTEMBEDDING,
+    input_field_names=["chunk"],
+    output_field_names=["vector"],
+    params={
+        "provider": "TEI",
+        "endpoint": os.getenv("EMBEDDING_ENDPOINT"),  # container endpoint
+    },
+)
+schema.add_function(embedding_function)
 
 # Indexing
 # Prepare index parameters
