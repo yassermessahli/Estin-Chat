@@ -27,9 +27,9 @@ class DataPipelineOrchestrator:
     """
     
     def __init__(self, 
-                 text_model: str = "qwen3:8b",           
-                 table_model: str = "qwen3:8b",           
-                 image_model: str = "llama3.2-vision:11b", 
+                 text_model: str = "qwen3:4b",           
+                 table_model: str = "qwen3:4b",           
+                 image_model: str = "granite3.2-vision:latest", 
                  input_folder: str = None, 
                  output_folder: str = None):
         
@@ -93,7 +93,6 @@ class DataPipelineOrchestrator:
         return loader.analyse()
     
     def _transform_content(self, pages_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        
         """Transform and clean extracted content"""
         print("Transforming content...")
 
@@ -115,7 +114,7 @@ class DataPipelineOrchestrator:
                 try:
                     text_cleaner = TextCleanup(page_data["plain_text"], self.text_model)
                     result = text_cleaner.process()
-                    transformed_page["cleaned_text"] = result.message.content
+                    transformed_page["cleaned_text"] = result
                     print(f"✓ Text cleaned with {self.text_model_params.model} ({len(transformed_page['cleaned_text'])} chars)")
                 except Exception as e:
                     print(f" ⚠️ Text cleaning failed: {e}")
@@ -125,7 +124,6 @@ class DataPipelineOrchestrator:
             if page_data["tables"]:
                 try:
                     for i, table in enumerate(page_data["tables"]):
-                        # TableCleanup needs: table_data, context, model
                         table_cleaner = TableCleanup(
                             table_data=table.get("data", table),  # The actual table data
                             context=page_data.get("plain_text", ""),  # Page text as context
@@ -134,7 +132,7 @@ class DataPipelineOrchestrator:
                         cleaned_table = table_cleaner.process()
                         transformed_page["cleaned_tables"].append({
                             "table_id": table.get("table", i + 1),
-                            "cleaned_data": cleaned_table.message.content
+                            "cleaned_data": cleaned_table  # Fix: Use `cleaned_table` directly
                         })
                     print(f"✓ {len(page_data['tables'])} tables cleaned with {self.table_model_params.model}")
                 except Exception as e:
@@ -150,16 +148,15 @@ class DataPipelineOrchestrator:
             if page_data["images"]:
                 try:
                     for image in page_data["images"]:
-                        # ImageCleanup needs: image_data, context, model
                         image_cleaner = ImageCleanup(
                             image_data=image,  # The complete image data (contains ext, base64, etc.)
-                            context=page_data.get("plain_text", ""),  # Page text as context
-                            model=self.image_model  # The model instance
+                            context=page_data.get("plain_text", ""),  
+                            model=self.image_model  
                         )
                         cleaned_image = image_cleaner.process()
                         transformed_page["cleaned_images"].append({
                             "image_id": image["image_id"],
-                            "description": cleaned_image.message.content,
+                            "description": cleaned_image,
                             "original_ext": image["ext"]
                         })
                     print(f"✓ {len(page_data['images'])} images described with {self.image_model_params.model}")
@@ -174,8 +171,99 @@ class DataPipelineOrchestrator:
                         })
             
             transformed_pages.append(transformed_page)
-    
+        
         return transformed_pages
+
+    def _extract_filename_metadata(self, filename: str) -> Dict[str, Any]:
+        """Extract metadata from filename pattern: LEVEL_SEMESTER_MODULE_TYPE_YEAR_..."""
+        base_name = os.path.splitext(filename)[0]
+        
+        parts = base_name.split('_')
+        
+        metadata = {
+            "original_filename": filename,
+            "level": None,
+            "semester": None, 
+            "module": None,
+            "type": None,
+            "year": None
+        }
+        
+        if len(parts) >= 4:
+            if re.match(r'^[0-9]+C[PS]$', parts[0]):
+                metadata["level"] = parts[0]
+            
+            if re.match(r'^S[12]$', parts[1]):
+                metadata["semester"] = parts[1]
+            
+            metadata["module"] = parts[2]
+            
+            type_part = parts[3].upper()
+            if type_part in ['COURS', 'TD', 'TP']:
+                metadata["type"] = type_part
+            
+            for part in parts:
+                if re.match(r'^20[0-9]{2}$', part):
+                    metadata["year"] = int(part)
+                    break
+        
+        return metadata
+
+    def _split_content(self, transformed_pages: List[Dict[str, Any]], filename: str) -> List[Dict[str, Any]]:
+        """Split cleaned content into chunks with enhanced metadata"""
+        print("Splitting content into chunks...")
+        all_chunks = []
+        
+        file_metadata = self._extract_filename_metadata(filename)
+        
+        for page_data in transformed_pages:
+            page_num = page_data["page"]
+            
+            if page_data["cleaned_text"]:
+                text_chunks = self.splitter.split_text(page_data["cleaned_text"])
+                for i, chunk in enumerate(text_chunks):
+                    all_chunks.append({
+                        "chunk_id": f"page_{page_num}_text_{i+1}",
+                        "page": page_num,
+                        "type": "text",
+                        "content": chunk,
+                        "metadata": {
+                            "chunk_index": i,
+                            "total_chunks_in_page": len(text_chunks),
+                            **file_metadata,
+                            "content_type": "text"
+                        }
+                    })
+            
+            for table in page_data["cleaned_tables"]:
+                all_chunks.append({
+                    "chunk_id": f"page_{page_num}_table_{table['table_id']}",
+                    "page": page_num,
+                    "type": "table",
+                    "content": table["cleaned_data"],
+                    "metadata": {
+                        "table_id": table["table_id"],
+                        **file_metadata,
+                        "content_type": "table"
+                    }
+                })
+            
+            for image in page_data["cleaned_images"]:
+                all_chunks.append({
+                    "chunk_id": f"page_{page_num}_image_{image['image_id']}",
+                    "page": page_num,
+                    "type": "image",
+                    "content": image["description"],
+                    "metadata": {
+                        "image_id": image["image_id"],
+                        "original_ext": image["original_ext"],
+                        **file_metadata,
+                        "content_type": "image"
+                    }
+                })
+        
+        print(f"Created {len(all_chunks)} total chunks")
+        return all_chunks
 
     def _save_outputs(self, filename: str, raw_data: List[Dict], cleaned_data: List[Dict], chunks: List[Dict]):
         """Save outputs to different folders"""
@@ -343,9 +431,9 @@ class DataPipelineOrchestrator:
 def main():
     """Main function to run the complete pipeline with specialized models"""
     orchestrator = DataPipelineOrchestrator(
-        text_model="qwen3:8b",                    
-        table_model="qwen3:8b",                   
-        image_model="llama3.2-vision:11b",       
+        text_model="qwen3:4b",                    
+        table_model="qwen3:4b",                   
+        image_model="granite3.2-vision:latest",       
         input_folder="/home/melissa-ghemari/estin-chatbot/data-pipeline/sample-data",
         output_folder="specialized_pipeline_outputs"
     )
