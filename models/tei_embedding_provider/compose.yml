@@ -1,0 +1,21 @@
+﻿services:
+  tei:
+    # the official cpu-supported image
+    image: ghcr.io/huggingface/text-embeddings-inference:cpu-1.7 
+
+    container_name: ${CONTAINER_NAME}
+
+    ports:
+      - "${HOST_PORT}:80"
+
+    volumes:
+      # to store model files and other data
+      - ${VOLUME_PATH}:/data 
+
+    # Load all variables from the .env file directly into the container's environment.
+    # The text-embeddings-inference server will automatically pick them up.
+    env_file:
+      - .env
+
+    # Ensures the container restarts automatically if it fails
+    restart: unless-stopped
