@@ -51,4 +51,4 @@ You are given a table extracted from a PDF document with the context of the docu
             },
             {"role": "user", "content": self.instruction},
         ]
-        return self.model.generate(messages)
+        return self.model.generate(messages).message.content
