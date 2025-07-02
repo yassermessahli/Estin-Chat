@@ -9,6 +9,7 @@ authors = [
     {name = "Yasser Messahli", email = "y_messahli@estin.dz"},
     {name = "Anis Besmail", email = "a_bensmail@estin.dz"},
     {name = "Melissa Ghemari", email = "m_ghemari@estin.dz"},
+    {name = "Samy Debaili", email = "m_debaili@estin.dz"},
 ]
 maintainers = [
     {name = "Faical Azouaou", email = "azouaou@estin.dz"},
@@ -31,4 +32,6 @@ data-pipeline = [
     "pymupdf>=1.26.1",
 ]
 docs = []
-tests = []
+tests = [
+    "milvus-cli>=1.0.2",
+]
