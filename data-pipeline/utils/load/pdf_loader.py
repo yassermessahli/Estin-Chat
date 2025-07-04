@@ -52,8 +52,8 @@ class PDFLoader:
 
         for n, img in enumerate(images_refs):
             img_data = self.doc.extract_image(img[0])
-            img_base64 = base64.b64encode(img_data["image"]).decode("utf-8")
-            images_refs[n] = (img_base64, img_data["ext"])
+            # Convert bytes to base64 string to make it JSON serializable
+            image_b64 = base64.b64encode(img_data["image"]).decode()
             imgs.append(
                 {
                     "id": n + 1,

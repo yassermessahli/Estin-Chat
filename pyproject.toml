@@ -9,12 +9,17 @@ authors = [
     {name = "Yasser Messahli", email = "y_messahli@estin.dz"},
     {name = "Anis Besmail", email = "a_bensmail@estin.dz"},
     {name = "Melissa Ghemari", email = "m_ghemari@estin.dz"},
+    {name = "Samy Debaili", email = "m_debaili@estin.dz"},
 ]
 maintainers = [
     {name = "Faical Azouaou", email = "azouaou@estin.dz"},
     {name = "Ahror Belaid", email = "belaid@estin.dz"},
 ]
 dependencies = [
+    "langchain>=0.3.26",
+    "langchain-community>=0.3.26",
+    "langchain-core>=0.3.66",
+    "langchain-text-splitters>=0.3.8",
     "python-dotenv>=1.0.0",
 ]
 
@@ -22,10 +27,11 @@ dependencies = [
 [dependency-groups]
 rag = []
 data-pipeline = [
+    "ollama>=0.5.1",
+    "pymilvus>=2.5.11",
     "pymupdf>=1.26.1",
 ]
 docs = []
-tests = []
-data-pipelie = [
-    "pymupdf>=1.26.1",
+tests = [
+    "milvus-cli>=1.0.2",
 ]
