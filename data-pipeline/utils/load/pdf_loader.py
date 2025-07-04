@@ -56,8 +56,8 @@ class PDFLoader:
             images_refs[n] = (img_base64, img_data["ext"])
             imgs.append(
                 {
-                    "image_id": n + 1,
-                    "image": img_base64,
+                    "id": n + 1,
+                    "base64": img_base64,
                     "ext": img_data["ext"],
                 }
             )
