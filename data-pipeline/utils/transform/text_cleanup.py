@@ -1,42 +1,21 @@
 ﻿from .model import Model
-
+from .prompts import PromptTemplate, TEXT_CLEANUP_PROMPT, TEXT_CLEANUP_SYSTEM_PROMPT, OUTPUT_SCHEMA
 
 class TextCleanup:
-    def __init__(self, text: str, model: Model):
-        self.text = text
+    def __init__(self, text: str = "", model: Model = None, output_schema: str = OUTPUT_SCHEMA):
+        self.text = text if text is not None else "No text provided."
         self.model = model
-        self.instruction = self._build_prompt()
+        self.output_schema = output_schema
 
-    def _build_prompt(self):
-        return f"""
-## Your task:
-You are given the raw text extracted from a PDF document that contains some noises and formatting issues. Your task is to clean it and format it for vector storing by following the next steps:
-1. text understanding
-1. cleaning
-2. summarizing
-3. standardizing to paragraphs format
-
-## remarks:
-- consider reformatting the math expressions.
-- content may be in english or french, output should be exclusively in english.
-- try to keep the original expression and meaning of the text. 
-- put the summary directly, no introductions from you.
-- it may contains headers and footers and authors names, you should ignore them and consider only the main content.
-- the output should be in paragraphs separated by an empty line. each paragraph composed of setences separated by dots.
-
-## The text:
-{self.text}
-
-## Your output:
-        """
-
+        self.instruction = PromptTemplate(template=TEXT_CLEANUP_PROMPT, text=self.text).prompt
+        self.system_instruction = TEXT_CLEANUP_SYSTEM_PROMPT
+        
     def process(self):
         messages = [
             {
                 "role": "system",
-                "content": "You are a professional text cleaner and summarizer for both english and french raw texts.",
+                "content": self.system_instruction,
             },
             {"role": "user", "content": self.instruction},
         ]
-        response = self.model.generate(messages)
-        return response.message.content
+        return self.model.generate(messages).messages[0].content
