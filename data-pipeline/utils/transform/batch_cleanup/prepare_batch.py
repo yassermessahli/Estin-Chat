@@ -8,9 +8,21 @@ import json
 import os
 import argparse
 import dotenv
+import tiktoken
 
 # Load environment variables from .env file
 dotenv.load_dotenv()
+
+
+def count_tokens(text: str, model: str = None) -> int:
+    """tokens counter from a text string based on a specific model tokenizer."""
+    if not text:
+        return 0
+    try:
+        tokenizer = tiktoken.encoding_for_model(model)
+    except KeyError:
+        tokenizer = tiktoken.get_encoding("cl100k_base")
+    return len(tokenizer.encode(text))
 
 
 def prepare_page_text_request(text: str, base_req_id: str):
@@ -23,12 +35,12 @@ def prepare_page_text_request(text: str, base_req_id: str):
     user_prompt = agent.instruction
     output_schema = agent.output_schema
 
-    return {
+    request = {
         "custom_id": f"req_{base_req_id}_text",
         "method": "POST",
         "url": "/v1/chat/completions",
         "body": {
-            "model": "gpt-4.1-mini",
+            "model": os.getenv("TEXTS_CLEANUP_MODEL", "gpt-4.1-mini"),
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
@@ -40,27 +52,32 @@ def prepare_page_text_request(text: str, base_req_id: str):
             "stream": False,
         },
     }
+    # count the total input tokens
+    input_tokens = count_tokens(text=system_prompt + user_prompt, model="gpt-4")
+    return request, input_tokens
 
 
 def prepare_page_table_requests(tables: list[dict], base_req_id: str):
     all_requests = []
     skipped = 0
-    for t in tables:
+    input_tokens = 0
+    for tbl in tables:
         try:
-            data = t.get("data", None)
+            data = tbl.get("data", None)
             agent = table_cleanup.TableCleanup(table_data=data)
         except ValueError:
             skipped += 1
             continue
+        
         system_prompt = agent.system_instruction
-        output_schema = agent.output_schema
         user_prompt = agent.instruction
+        output_schema = agent.output_schema
         req = {
-            "custom_id": f"req_{base_req_id}_t{t['table']+1}_table",
+            "custom_id": f"req_{base_req_id}_t{tbl['table']+1}_table",
             "method": "POST",
             "url": "/v1/chat/completions",
             "body": {
-                "model": "gpt-4.1-mini",
+                "model": os.getenv("TABLES_CLEANUP_MODEL", "gpt-4.1-mini"),
                 "messages": [
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
@@ -76,14 +93,17 @@ def prepare_page_table_requests(tables: list[dict], base_req_id: str):
             },
         }
         all_requests.append(req)
+        input_tokens += count_tokens(text=system_prompt + user_prompt, model="gpt-4")
 
-    return all_requests, skipped
+
+    return all_requests, skipped, input_tokens
 
 
 def prepare_page_image_requests(images: list[dict], base_req_id: str):
     all_requests = []
     skipped = 0
-    for i, img in enumerate(images):
+    input_tokens = 0
+    for img in images:
         try:
             agent = image_cleanup.ImageCleanup(image_data=img)
         except ValueError:
@@ -102,7 +122,7 @@ def prepare_page_image_requests(images: list[dict], base_req_id: str):
             "method": "POST",
             "url": "/v1/chat/completions",
             "body": {
-                "model": "gpt-4o-mini-2024-07-18",
+                "model": os.getenv("IMAGES_CLEANUP_MODEL", "gpt-4o-mini"),
                 "messages": [
                     {"role": "system", "content": system_prompt},
                     {
@@ -129,14 +149,19 @@ def prepare_page_image_requests(images: list[dict], base_req_id: str):
             },
         }
         all_requests.append(req)
+        input_tokens += count_tokens(text=system_prompt + user_prompt, model="gpt-4o")
 
-    return all_requests, skipped
+    return all_requests, skipped, input_tokens
 
 
 def prepare_full_batches_for_cleanup(input_folder: str, output_folder: str):
     texts_batch_requests = []
     tables_batch_requests = []
     images_batch_requests = []
+    
+    texts_input_tokens = 0
+    tables_input_tokens = 0
+    images_input_tokens = 0
 
     # Ensure output folder exists
     os.makedirs(output_folder, exist_ok=True)
@@ -160,10 +185,15 @@ def prepare_full_batches_for_cleanup(input_folder: str, output_folder: str):
             file_id = f.split(".")[0]
             
             # for logging
-            texts_processed = 0
-            images_processed = 0
-            tables_processed = 0
-            texts_skipped = tables_skipped = images_skipped = 0
+            texts_got = 0
+            images_got = 0
+            tables_got = 0
+            texts_skipped = 0  # Texts are not skipped, so this will be 0
+            tables_skipped = 0
+            images_skipped = 0
+            file_texts_tokens = 0
+            file_tables_tokens = 0
+            file_images_tokens = 0
             file_processing_start_time = time.time()
 
             with open(file_path, "r", encoding="utf-8") as file:
@@ -171,29 +201,62 @@ def prepare_full_batches_for_cleanup(input_folder: str, output_folder: str):
                 for np, p in enumerate(pages):
                     page_id = f"{file_id}_p{np+1}"
                     if p["plain_text"]:
-                        texts_batch_requests.append(
-                            prepare_page_text_request(p["plain_text"], page_id)
-                        )
-                        texts_processed += 1
+                        request, input_tokens = (prepare_page_text_request(p["plain_text"], page_id))
+                        if request:
+                            texts_batch_requests.append(request)
+                            texts_got += 1
+                            texts_input_tokens += input_tokens
+                            file_texts_tokens += input_tokens
+                        else:
+                            texts_skipped += 1
                     if p["tables"]:
-                        requests, skipped = prepare_page_table_requests(p["tables"], page_id)
+                        requests, skipped, input_tokens = prepare_page_table_requests(p["tables"], page_id)
                         tables_batch_requests.extend(requests)
                         tables_skipped += skipped
-                        tables_processed += len(p["tables"])
+                        tables_got += len(p["tables"])
+                        tables_input_tokens += input_tokens
+                        file_tables_tokens += input_tokens
                     if p["images"]:
-                        requests, skipped = prepare_page_image_requests(p["images"], page_id)
+                        requests, skipped, input_tokens = prepare_page_image_requests(p["images"], page_id)
                         images_batch_requests.extend(requests)
                         images_skipped += skipped
-                        images_processed += len(p["images"])
+                        images_got += len(p["images"])
+                        images_input_tokens += input_tokens
+                        file_images_tokens += input_tokens
             file_processing_end_time = time.time()
             file_processing_time = file_processing_end_time - file_processing_start_time
-            print(
-                f"[{nf+1}/{fl}]: {f} processed in {file_processing_time:.3f}",
-                f"\t- Total data: {texts_processed} texts  {tables_processed} tables  {images_processed} images",
-                f"\t- processed: {texts_processed - texts_skipped} texts  {tables_processed - tables_skipped} tables  {images_processed - images_skipped} images",
-                f"\t- skipped: {texts_skipped} texts  {tables_skipped} tables  {images_skipped} images",
-                sep="\n", end="\n\n"
-            )
+            
+            # ---------------- Start of new table printing logic -------------------------
+            print(f"[{nf+1}/{fl}]: {f} processed in {file_processing_time:.3f}s")
+            
+            header = f"| {'Type':<8} | {'Got':>10} | {'Processed':>10} | {'Skipped':>10} | {'Input Tokens':>15} |"
+            separator = "-" * len(header)
+            
+            print(separator)
+            print(header)
+            print(separator)
+            
+            texts_processed = texts_got - texts_skipped
+            tables_processed = tables_got - tables_skipped
+            images_processed = images_got - images_skipped
+            
+            # Data rows
+            print(f"| {'Texts':<8} | {texts_got:>10} | {texts_processed:>10} | {texts_skipped:>10} | {file_texts_tokens:>15} |")
+            print(f"| {'Tables':<8} | {tables_got:>10} | {tables_processed:>10} | {tables_skipped:>10} | {file_tables_tokens:>15} |")
+            print(f"| {'Images':<8} | {images_got:>10} | {images_processed:>10} | {images_skipped:>10} | {file_images_tokens:>15} |")
+
+            print(separator)
+            
+            # Totals row
+            total_got = texts_got + tables_got + images_got
+            total_skipped = texts_skipped + tables_skipped + images_skipped
+            total_processed = total_got - total_skipped
+            total_tokens = file_texts_tokens + file_tables_tokens + file_images_tokens
+            print(f"| {'Total':<8} | {total_got:>10} | {total_processed:>10} | {total_skipped:>10} | {total_tokens:>15} |")
+            
+            print(separator)
+            print() # for a blank line after the table
+            # ----------------- End of new table printing logic --------------------------
 
     # save each batch to a jsonl file
     if texts_batch_requests:
@@ -226,6 +289,7 @@ def prepare_full_batches_for_cleanup(input_folder: str, output_folder: str):
     print(
         f"\t- Total requests: {len(texts_batch_requests) + len(tables_batch_requests) + len(images_batch_requests)}"
     )
+    print(f"\t- Total input tokens: {texts_input_tokens + tables_input_tokens + images_input_tokens}")
     print("="*100)
 
 
