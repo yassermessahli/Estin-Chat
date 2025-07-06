@@ -17,8 +17,8 @@ maintainers = [
 ]
 dependencies = [
     "langchain>=0.3.26",
-    "langchain-community>=0.3.26",
-    "langchain-core>=0.3.66",
+    "langchain-community>=0.3.27",
+    "langchain-core>=0.3.68",
     "langchain-text-splitters>=0.3.8",
     "python-dotenv>=1.0.0",
 ]
@@ -28,6 +28,7 @@ dependencies = [
 rag = []
 data-pipeline = [
     "ollama>=0.5.1",
+    "openai>=1.93.0",
     "pymilvus>=2.5.11",
     "pymupdf>=1.26.1",
 ]

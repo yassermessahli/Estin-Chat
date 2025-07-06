@@ -1,3 +1,5 @@
+from ..pdf_loader import PDFLoader
+
 import os
 import sys
 import json
@@ -5,15 +7,8 @@ import time
 import argparse
 
 
-# Find the pdf_loader.py file relative to this script's location
-current_dir = os.path.dirname(os.path.abspath(__file__))
-parent_dir = os.path.dirname(current_dir)
-sys.path.insert(0, parent_dir)
-from pdf_loader import PDFLoader
-
-
 def main():
-    parser = argparse.ArgumentParser(description="Extract content from PDF file")
+    parser = argparse.ArgumentParser(description="Extract content from PDF files")
     parser.add_argument("file_path", help="Path to the PDF file to process")
     args = parser.parse_args()
 
