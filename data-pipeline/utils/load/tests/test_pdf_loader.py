@@ -13,35 +13,50 @@ from pdf_loader import PDFLoader
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Extract content from PDF file")
-    parser.add_argument("file_path", help="Path to the PDF file to process")
+    parser = argparse.ArgumentParser(
+        description="Extract content from all PDF files in a folder."
+    )
+    parser.add_argument("input_folder", help="Path to the folder containing PDF files")
+    parser.add_argument("output_folder", help="Path to the folder to save JSON files")
     args = parser.parse_args()
 
-    if not os.path.exists(args.file_path):
-        print(f"Error: file not found")
+    if not os.path.isdir(args.input_folder):
+        print(f"Error: Input folder not found at {args.input_folder}")
         sys.exit(1)
 
-    start_time = time.time()
+    # Create output folder if it doesn't exist
+    os.makedirs(args.output_folder, exist_ok=True)
 
-    pdf_loader = PDFLoader(args.file_path)
-    result = pdf_loader.analyse()
+    total_start_time = time.time()
+    pdf_files = [f for f in os.listdir(args.input_folder) if f.lower().endswith(".pdf")]
+    nb_pdfs = len(pdf_files)
+    if not pdf_files:
+        print(f"No PDF files found in {args.input_folder}")
+        return
 
-    # Create results folder if it doesn't exist
-    results_dir = os.path.join(os.path.dirname(__file__), "outputs")
-    os.makedirs(results_dir, exist_ok=True)
+    for n, filename in enumerate(pdf_files):
+        file_path = os.path.join(args.input_folder, filename)
+        print(f"[{n}/{nb_pdfs}]: Processing {filename}...")
+        start_time = time.time()
 
-    # Generate output filename
-    input_filename = os.path.basename(args.file_path)
-    output_filename = os.path.splitext(input_filename)[0] + "_extracted.json"
-    output_file = os.path.join(results_dir, output_filename)
+        pdf_loader = PDFLoader(file_path)
+        result = pdf_loader.analyse()
 
-    # Save as json
-    with open(output_file, "w", encoding="utf-8") as f:
-        json.dump(result, f, ensure_ascii=False, indent=2)
+        # Generate output filename
+        output_filename = os.path.splitext(filename)[0] + ".json"
+        output_file = os.path.join(args.output_folder, output_filename)
 
-    end_time = time.time()
-    print(f"Executed in: {end_time - start_time:.5f} seconds")
-    print(f"Results saved to: `outputs/` folder")
+        # Save as json
+        with open(output_file, "w", encoding="utf-8") as f:
+            json.dump(result, f, ensure_ascii=False, indent=2)
+
+        end_time = time.time()
+        print(f"Finished in: {end_time - start_time:.2f} seconds")
+
+    total_end_time = time.time()
+    print(
+        f"Total execution time for {len(pdf_files)} files: {total_end_time - total_start_time:.2f} seconds"
+    )
 
 
 if __name__ == "__main__":
