@@ -15,8 +15,11 @@ dotenv.load_dotenv()
 
 def prepare_page_text_request(text: str, base_req_id: str):
     """Prepare a single text request for the OpenAI Batch API from the raw text to be cleaned."""
+    
+    if not text:
+        return None
     agent = text_cleanup.TextCleanup(text=text)
-    system_prompt = agent.SYSTEM_INSTRUCTION
+    system_prompt = agent.system_instruction
     user_prompt = agent.instruction
     output_schema = agent.output_schema
 
@@ -41,54 +44,65 @@ def prepare_page_text_request(text: str, base_req_id: str):
 
 def prepare_page_table_requests(tables: list[dict], base_req_id: str):
     all_requests = []
-    system_prompt = table_cleanup.TableCleanup().SYSTEM_INSTRUCTION
-    output_schema = table_cleanup.TableCleanup().output_schema
-
+    skipped = 0
     for t in tables:
-        if t["data"]:
-            agent = table_cleanup.TableCleanup(table_data=t)
-            user_prompt = agent.instruction
-            req = {
-                "custom_id": f"req_{base_req_id}_t{t['table']}_table",
-                "method": "POST",
-                "url": "/v1/chat/completions",
-                "body": {
-                    "model": "gpt-4.1-mini",
-                    "messages": [
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_prompt},
-                    ],
-                    "response_format": {
-                        "type": "json_schema",
-                        "json_schema": output_schema,
-                    },
-                    "temperature": 0.50,
-                    "top_p": 1,
-                    "max_completion_tokens": 2024,
-                    "stream": False,
-                },
-            }
-            all_requests.append(req)
-
-    return all_requests
-
-
-def prepare_page_image_requests(images: list[dict], base_req_id: str):
-    all_requests = []
-    system_prompt = image_cleanup.ImageCleanup().SYSTEM_INSTRUCTION
-    output_schema = image_cleanup.ImageCleanup().output_schema
-
-    for i, img in enumerate(images):
-        agent = image_cleanup.ImageCleanup(image_data=img)
+        try:
+            data = t.get("data", None)
+            agent = table_cleanup.TableCleanup(table_data=data)
+        except ValueError:
+            skipped += 1
+            continue
+        system_prompt = agent.system_instruction
+        output_schema = agent.output_schema
         user_prompt = agent.instruction
-        base64_image = agent.img
-        extension = agent.ext
         req = {
-            "custom_id": f"req_{base_req_id}_i{i}_image",
+            "custom_id": f"req_{base_req_id}_t{t['table']+1}_table",
             "method": "POST",
             "url": "/v1/chat/completions",
             "body": {
                 "model": "gpt-4.1-mini",
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                "response_format": {
+                    "type": "json_schema",
+                    "json_schema": output_schema,
+                },
+                "temperature": 0.50,
+                "top_p": 1,
+                "max_completion_tokens": 2024,
+                "stream": False,
+            },
+        }
+        all_requests.append(req)
+
+    return all_requests, skipped
+
+
+def prepare_page_image_requests(images: list[dict], base_req_id: str):
+    all_requests = []
+    skipped = 0
+    for i, img in enumerate(images):
+        try:
+            agent = image_cleanup.ImageCleanup(image_data=img)
+        except ValueError:
+            skipped += 1
+            continue
+        
+        system_prompt = agent.system_instruction
+        user_prompt = agent.instruction
+        output_schema = agent.output_schema
+        
+        base64_image = agent.img
+        extension = agent.ext
+        
+        req = {
+            "custom_id": f"req_{base_req_id}_i{img['image_id']}_image",
+            "method": "POST",
+            "url": "/v1/chat/completions",
+            "body": {
+                "model": "gpt-4o-mini-2024-07-18",
                 "messages": [
                     {"role": "system", "content": system_prompt},
                     {
@@ -114,9 +128,9 @@ def prepare_page_image_requests(images: list[dict], base_req_id: str):
                 "stream": False,
             },
         }
-        all_requests.append(req)  # This was incorrectly indented
+        all_requests.append(req)
 
-    return all_requests
+    return all_requests, skipped
 
 
 def prepare_full_batches_for_cleanup(input_folder: str, output_folder: str):
@@ -137,38 +151,48 @@ def prepare_full_batches_for_cleanup(input_folder: str, output_folder: str):
 
     if json_files:
         fl = len(json_files)
-        print(f"Found {fl} JSON files in {input_folder}.")
-        print("Begin processing ...")
+        print("="*100, f"Found {fl} JSON files in {input_folder}.", sep="\n")
+        print("Begin processing ...", "-"*100, sep="\n")
 
         for nf, f in enumerate(json_files):
+            # Construct the full file path
             file_path = os.path.join(input_folder, f)
             file_id = f.split(".")[0]
-            ntxt = nimg = ntbl = 0
+            
+            # for logging
+            texts_processed = 0
+            images_processed = 0
+            tables_processed = 0
+            texts_skipped = tables_skipped = images_skipped = 0
             file_processing_start_time = time.time()
 
             with open(file_path, "r", encoding="utf-8") as file:
                 pages = json.load(file)
                 for np, p in enumerate(pages):
-                    page_id = f"{file_id}_p{np}"
+                    page_id = f"{file_id}_p{np+1}"
                     if p["plain_text"]:
                         texts_batch_requests.append(
                             prepare_page_text_request(p["plain_text"], page_id)
                         )
-                        ntxt += 1
+                        texts_processed += 1
                     if p["tables"]:
-                        tables_batch_requests.extend(
-                            prepare_page_table_requests(p["tables"], page_id)
-                        )
-                        ntbl += len(p["tables"])
+                        requests, skipped = prepare_page_table_requests(p["tables"], page_id)
+                        tables_batch_requests.extend(requests)
+                        tables_skipped += skipped
+                        tables_processed += len(p["tables"])
                     if p["images"]:
-                        images_batch_requests.extend(
-                            prepare_page_image_requests(p["images"], page_id)
-                        )
-                        nimg += len(p["images"])
+                        requests, skipped = prepare_page_image_requests(p["images"], page_id)
+                        images_batch_requests.extend(requests)
+                        images_skipped += skipped
+                        images_processed += len(p["images"])
             file_processing_end_time = time.time()
             file_processing_time = file_processing_end_time - file_processing_start_time
             print(
-                f"[{nf+1}/{fl}]: {f} processed in {file_processing_time:.3f}s: ({ntxt} texts  {ntbl} tables  {nimg} images)"
+                f"[{nf+1}/{fl}]: {f} processed in {file_processing_time:.3f}",
+                f"\t- Total data: {texts_processed} texts  {tables_processed} tables  {images_processed} images",
+                f"\t- processed: {texts_processed - texts_skipped} texts  {tables_processed - tables_skipped} tables  {images_processed - images_skipped} images",
+                f"\t- skipped: {texts_skipped} texts  {tables_skipped} tables  {images_skipped} images",
+                sep="\n", end="\n\n"
             )
 
     # save each batch to a jsonl file
@@ -193,7 +217,7 @@ def prepare_full_batches_for_cleanup(input_folder: str, output_folder: str):
     global_end_time = time.time()
     global_processing_time = global_end_time - global_start_time
     # print summary
-    print("Processing completed.")
+    print("="*100, "Processing completed.", "="*100, sep="\n")
     print(f"Total processing time: {global_processing_time:.3f}s")
     print("Statistics:")
     print(f"\t- Text requests: {len(texts_batch_requests)}")
@@ -202,6 +226,7 @@ def prepare_full_batches_for_cleanup(input_folder: str, output_folder: str):
     print(
         f"\t- Total requests: {len(texts_batch_requests) + len(tables_batch_requests) + len(images_batch_requests)}"
     )
+    print("="*100)
 
 
 def main():

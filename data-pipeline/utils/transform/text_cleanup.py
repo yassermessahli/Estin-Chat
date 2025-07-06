@@ -9,9 +9,9 @@ from .prompts import (
 
 class TextCleanup:
     def __init__(
-        self, text: str = "", model: Model = None, output_schema: str = OUTPUT_SCHEMA
+        self, text: str = None, model: Model = None, output_schema: str = OUTPUT_SCHEMA
     ):
-        self.text = text if text is not None else "No text provided."
+        self.text = text
         self.model = model
         self.output_schema = output_schema
 
@@ -21,11 +21,13 @@ class TextCleanup:
         self.system_instruction = TEXT_CLEANUP_SYSTEM_PROMPT
 
     def process(self):
-        messages = [
-            {
-                "role": "system",
-                "content": self.system_instruction,
-            },
-            {"role": "user", "content": self.instruction},
-        ]
-        return self.model.generate(messages).messages[0].content
+        if self.text:
+            messages = [
+                {
+                    "role": "system",
+                    "content": self.system_instruction,
+                },
+                {"role": "user", "content": self.instruction},
+            ]
+            return self.model.generate(messages).messages[0].content
+        raise ValueError("No text provided for cleanup.")

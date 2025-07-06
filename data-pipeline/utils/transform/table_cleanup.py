@@ -26,14 +26,14 @@ class TableCleanup:
 
     def _format_table_for_prompt(self):
         """Convert list of lists to readable table format"""
-        if self.table_data:
+        if self.table_data and len(self.table_data) > 1:
             formatted_rows = []
             for row in self.table_data:
                 # Join cells with | separator
                 formatted_row = " | ".join(str(cell).replace("\n", "/") for cell in row)
                 formatted_rows.append(formatted_row)
             return "\n".join(formatted_rows)
-        return "No table data"
+        raise ValueError("Table data must contain at least two rows.")
 
     def process(self):
         messages = [

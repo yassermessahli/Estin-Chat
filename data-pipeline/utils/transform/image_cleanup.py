@@ -14,19 +14,26 @@ class ImageCleanup:
         model: Model = None,
         output_schema: str = OUTPUT_SCHEMA,
     ):
-        self.img = image_data["base64"] if image_data is not None else ""
-        self.ext = image_data["ext"] if image_data is not None else ""
-        self.model = model
+        if (
+            isinstance(image_data, dict)
+            and "base64" in image_data.keys()
+            and "ext" in image_data.keys()
+        ):
+            if not isinstance(image_data["base64"], str):
+                raise ValueError("image 'base64' must be a base64 string representation.")
+            self.img = image_data["base64"]
+            self.ext = image_data["ext"]
+        else:
+            raise ValueError("Image data must be a dictionary with 'base64' and 'ext' keys.")
 
+        self.output_schema = output_schema
+        self.model = model
         self.instruction = PromptTemplate(
-            template=IMAGE_CLEANUP_PROMPT, image_extension=self.ext
-        ).prompt
+            template=IMAGE_CLEANUP_PROMPT, 
+            image_extension=self.ext).prompt
         self.system_instruction = IMAGE_CLEANUP_SYSTEM_PROMPT
 
     def process(self):
-        # IF NEEDED: Convert binary data to base64 for the vision model
-        # image_b64 = base64.b64encode(self.image_data).decode("utf-8")
-
         messages = [
             {
                 "role": "system",
