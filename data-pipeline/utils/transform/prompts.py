@@ -2,7 +2,7 @@
 
 TEXT_CLEANUP_PROMPT = """
 ## Task  
-Clean and structure raw text from a PDF for vector storage:
+Clean and structure raw text from a PDF for vector storage.
 
 1. Understand content.  
 2. Remove noise (headers, footers, author names).  
@@ -13,6 +13,7 @@ Clean and structure raw text from a PDF for vector storage:
 **Notes**  
 - Input may be English or French; output must be English.  
 - Preserve original meaning; no extra commentary.
+- PDF metadata (context): {context}
 
 **Input**  
 {text}
@@ -27,6 +28,7 @@ Convert a PDF‑extracted table into structured JSON for vector storage:
 3. Generate a concise descriptive summary, split into semantically coherent "paragraphs" (~350 chars/75 tokens each).  
 4. Output **only** valid JSON matching the given schema.
 5. If the table doesn't have useful data, output an empty array `[]`.
+- PDF metadata (context): {context}
 
 **Table Content**  
 {table_data}
@@ -46,6 +48,7 @@ Analyze the {image_extension} image given in context extracted from a PDF and ou
 - Input may be English or French; output must be English.  
 - Preserve original meaning; no extra commentary.  
 - Output **only** valid JSON matching the given schema.
+- PDF metadata (context): {context}
 """
 
 TEXT_CLEANUP_SYSTEM_PROMPT = """

@@ -11,6 +11,7 @@ class ImageCleanup:
     def __init__(
         self,
         image_data: dict = None,
+        context: str = None,
         model: Model = None,
         output_schema: str = OUTPUT_SCHEMA,
     ):
@@ -30,7 +31,9 @@ class ImageCleanup:
         self.model = model
         self.instruction = PromptTemplate(
             template=IMAGE_CLEANUP_PROMPT, 
-            image_extension=self.ext).prompt
+            image_extension=self.ext,
+            context=context
+        ).prompt
         self.system_instruction = IMAGE_CLEANUP_SYSTEM_PROMPT
 
     def process(self):

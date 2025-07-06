@@ -30,7 +30,7 @@ def prepare_page_text_request(text: str, base_req_id: str):
     
     if not text:
         return None
-    agent = text_cleanup.TextCleanup(text=text)
+    agent = text_cleanup.TextCleanup(text=text, context=base_req_id)
     system_prompt = agent.system_instruction
     user_prompt = agent.instruction
     output_schema = agent.output_schema
@@ -64,7 +64,7 @@ def prepare_page_table_requests(tables: list[dict], base_req_id: str):
     for tbl in tables:
         try:
             data = tbl.get("data", None)
-            agent = table_cleanup.TableCleanup(table_data=data)
+            agent = table_cleanup.TableCleanup(table_data=data, context=base_req_id)
         except ValueError:
             skipped += 1
             continue
@@ -105,7 +105,7 @@ def prepare_page_image_requests(images: list[dict], base_req_id: str):
     input_tokens = 0
     for img in images:
         try:
-            agent = image_cleanup.ImageCleanup(image_data=img)
+            agent = image_cleanup.ImageCleanup(image_data=img, context=base_req_id)
         except ValueError:
             skipped += 1
             continue
