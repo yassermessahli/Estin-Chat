@@ -226,7 +226,7 @@ def prepare_full_batches_for_cleanup(input_folder: str, output_folder: str):
             file_processing_end_time = time.time()
             file_processing_time = file_processing_end_time - file_processing_start_time
             
-            # ---------------- Start of new table printing logic -------------------------
+            # ----------------------- Start of new table printing logic -----------------------------
             print(f"[{nf+1}/{fl}]: {f} processed in {file_processing_time:.3f}s")
             
             header = f"| {'Type':<8} | {'Got':>10} | {'Processed':>10} | {'Skipped':>10} | {'Input Tokens':>15} |"
@@ -256,7 +256,7 @@ def prepare_full_batches_for_cleanup(input_folder: str, output_folder: str):
             
             print(separator)
             print() # for a blank line after the table
-            # ----------------- End of new table printing logic --------------------------
+            # ------------------------- End of new table printing logic ----------------------------
 
     # save each batch to a jsonl file
     if texts_batch_requests:
@@ -279,17 +279,22 @@ def prepare_full_batches_for_cleanup(input_folder: str, output_folder: str):
 
     global_end_time = time.time()
     global_processing_time = global_end_time - global_start_time
+    nb_texts_requests = len(texts_batch_requests)
+    nb_tables_requests = len(tables_batch_requests)
+    nb_images_requests = len(images_batch_requests)
     # print summary
     print("="*100, "Processing completed.", "="*100, sep="\n")
-    print(f"Total processing time: {global_processing_time:.3f}s")
     print("Statistics:")
-    print(f"\t- Text requests: {len(texts_batch_requests)}")
-    print(f"\t- Table requests: {len(tables_batch_requests)}")
-    print(f"\t- Image requests: {len(images_batch_requests)}")
+    print(f"\tTotal files processed: {len(json_files)}")
+    print(f"\tTotal processing time: {global_processing_time:.3f}s")
+    print(f"\tTexts: {nb_texts_requests} requests | {texts_input_tokens} input tokens")
+    print(f"\tTables: {nb_tables_requests} requests | {tables_input_tokens} input tokens")
+    print(f"\tImages: {nb_images_requests} requests | {images_input_tokens} text input tokens")
     print(
-        f"\t- Total requests: {len(texts_batch_requests) + len(tables_batch_requests) + len(images_batch_requests)}"
+        f"\tTotal: {nb_texts_requests + nb_tables_requests + nb_images_requests} requests | ",
+        f"{texts_input_tokens + tables_input_tokens + images_input_tokens} input tokens",
+        sep=""
     )
-    print(f"\t- Total input tokens: {texts_input_tokens + tables_input_tokens + images_input_tokens}")
     print("="*100)
 
 
