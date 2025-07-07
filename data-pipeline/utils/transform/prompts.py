@@ -28,6 +28,9 @@ Convert a PDF‑extracted table into structured JSON for vector storage:
 3. Generate a concise descriptive summary, split into semantically coherent "paragraphs" (~350 chars/75 tokens each).  
 4. Output **only** valid JSON matching the given schema.
 5. If the table doesn't have useful data, output an empty array `[]`.
+
+**Notes**
+- Input may be English or French; output must be English.  
 - PDF metadata (context): {context}
 
 **Table Content**  
@@ -45,22 +48,22 @@ Analyze the {image_extension} image given in context extracted from a PDF and ou
 3. Output semantically coherent "paragraphs" (~350 chars/75 tokens maximum for each).
 
 **Notes**  
-- Input may be English or French; output must be English.  
+- The image may be English or French texts; output must be *exclusively* in English.  
 - Preserve original meaning; no extra commentary.  
 - Output **only** valid JSON matching the given schema.
 - PDF metadata (context): {context}
 """
 
 TEXT_CLEANUP_SYSTEM_PROMPT = """
-You are a professional PDF content cleaner for academic and educational materials in frensh and english.
+You are a professional PDF content cleaner for academic and educational materials.
 """
 
 TABLE_CLEANUP_SYSTEM_PROMPT = """
-You are a professional PDF embedded tables cleaner for academic and educational materials in frensh and english.
+You are a professional PDF embedded tables cleaner for academic and educational materials.
 """
 
 IMAGE_CLEANUP_SYSTEM_PROMPT = """
-You are a professional PDF embedded images cleaner for academic and educational materials in frensh and english.
+You are a professional PDF embedded images cleaner for academic and educational materials.
 """
 
 OUTPUT_SCHEMA = {

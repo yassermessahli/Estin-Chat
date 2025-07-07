@@ -12,6 +12,7 @@ class TableCleanup:
     def __init__(
         self,
         table_data: List[List[str]] = None,
+        context: str = None,
         model: Model = None,
         output_schema: str = OUTPUT_SCHEMA,
     ):
@@ -20,7 +21,7 @@ class TableCleanup:
         self.output_schema = output_schema
 
         self.instruction = PromptTemplate(
-            template=TABLE_CLEANUP_PROMPT, table_data=self._format_table_for_prompt()
+            template=TABLE_CLEANUP_PROMPT, table_data=self._format_table_for_prompt(), context=context
         ).prompt
         self.system_instruction = TABLE_CLEANUP_SYSTEM_PROMPT
 

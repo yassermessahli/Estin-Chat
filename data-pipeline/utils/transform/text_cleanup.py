@@ -9,14 +9,15 @@ from .prompts import (
 
 class TextCleanup:
     def __init__(
-        self, text: str = None, model: Model = None, output_schema: str = OUTPUT_SCHEMA
+        self, text: str = None, model: Model = None, output_schema: str = OUTPUT_SCHEMA, context: str = None
     ):
         self.text = text
         self.model = model
         self.output_schema = output_schema
+        self.context = context
 
         self.instruction = PromptTemplate(
-            template=TEXT_CLEANUP_PROMPT, text=self.text
+            template=TEXT_CLEANUP_PROMPT, text=self.text, context=self.context
         ).prompt
         self.system_instruction = TEXT_CLEANUP_SYSTEM_PROMPT
 
