@@ -1,48 +1,51 @@
 ﻿from .model import Model
-import base64
-from pathlib import Path
+from .prompts import (
+    PromptTemplate,
+    IMAGE_CLEANUP_PROMPT,
+    IMAGE_CLEANUP_SYSTEM_PROMPT,
+    OUTPUT_SCHEMA,
+)
 
 
 class ImageCleanup:
-    def __init__(self, image_data, context: str, model: Model):
-        self.image_data = image_data
-        self.context = context
+    def __init__(
+        self,
+        image_data: dict = None,
+        context: str = None,
+        model: Model = None,
+        output_schema: str = OUTPUT_SCHEMA,
+    ):
+        if (
+            isinstance(image_data, dict)
+            and "base64" in image_data.keys()
+            and "ext" in image_data.keys()
+        ):
+            if not isinstance(image_data["base64"], str):
+                raise ValueError("image 'base64' must be a base64 string representation.")
+            self.img = image_data["base64"]
+            self.ext = image_data["ext"]
+        else:
+            raise ValueError("Image data must be a dictionary with 'base64' and 'ext' keys.")
+
+        self.output_schema = output_schema
         self.model = model
-        self.instruction = self._build_prompt()
-
-    def _build_prompt(self):
-        return f"""
-## Your task:
-give a description for the given ({self.image_data["ext"]}) image using the given context by following these steps:
-1. Image understanding
-2. Content extraction (text, diagrams, charts, formulas, etc.)
-3. summarized description generation
-
-## Context:
-{self.context}
-
-## remarks:
-- Image may contain english or french text, output should exclusively be in english.
-- Be accurate
-- outputs should be a very short paragraph summarizing the image content in plain text.
-
-## the image summary here:
-The image represents ...
-        """
+        self.instruction = PromptTemplate(
+            template=IMAGE_CLEANUP_PROMPT, 
+            image_extension=self.ext,
+            context=context
+        ).prompt
+        self.system_instruction = IMAGE_CLEANUP_SYSTEM_PROMPT
 
     def process(self):
-        # Convert binary data to base64 for the vision model
-        # image_b64 = base64.b64encode(self.image_data).decode("utf-8")
-
         messages = [
             {
                 "role": "system",
-                "content": "You are an accurate image analyzer and content extractor from academic and educational materials.",
+                "content": self.system_instruction,
             },
             {
                 "role": "user",
                 "content": self.instruction,
-                "images": [self.image_data["base64"]],  # Add the base64 image data here
+                "images": [self.img],
             },
         ]
         return self.model.generate(messages).message.content

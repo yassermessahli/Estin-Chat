@@ -23,6 +23,7 @@ uv.lock
 
 # outputs
 outputs/
+test_outputs/
 
 # other files
 tmp.py
