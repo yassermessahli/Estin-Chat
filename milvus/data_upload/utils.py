@@ -1,13 +1,15 @@
-﻿import json
+﻿from pymilvus.bulk_writer import RemoteBulkWriter, BulkFileType, bulk_import, get_import_progress
+from ..setup.schema import schema
+
+import json
 import re
 import os
 import dotenv
-from pymilvus.bulk_writer import RemoteBulkWriter, BulkFileType, bulk_import, get_import_progress
-from schema import schema
 
 dotenv.load_dotenv("../.env")
 
 def prepare_bulk_writer():
+    """Prepare a RemoteBulkWriter instance for MinIO data import."""
     conn = RemoteBulkWriter.S3ConnectParam(
         endpoint=os.getenv("MINIO_HOST"),
         access_key=os.getenv("MINIO_ACCESS_KEY"),
@@ -24,14 +26,18 @@ def prepare_bulk_writer():
     )
 
     print('bulk writer created...')
-
     return writer
 
-def import_all_bulk_data(writer: RemoteBulkWriter, batch_files: list):
+def import_all_bulk_data(batch_files: list):
+    """
+    Perform the bulk import of data into Milvus.
+    Args:
+        batch_files (list): List of parquet files to be imported.
+    """
     if batch_files:
         return bulk_import(
-            collection_name="estin_docs",
-            db_name="core_db",
+            collection_name=os.getenv("COLLECTION_NAME"),
+            db_name=os.getenv("DATABASE_NAME"),
             url=os.getenv("MILVUS_HOST"),
             files=batch_files
         )
@@ -39,30 +45,46 @@ def import_all_bulk_data(writer: RemoteBulkWriter, batch_files: list):
 
 
 def check_import_status(job_id: str):
+    """
+    Check the status of a bulk import job in Milvus.
+    Args:
+        job_id (str): The ID of the import job to check.
+    """
+    
     resp = get_import_progress(
         url=os.getenv("MILVUS_HOST"),
         job_id=job_id,
     )
+    return json.dumps(resp.json(), indent=4)
 
-    print(json.dumps(resp.json(), indent=4))
 
-def prepare_records_from_jsonl(file_path: dict):
+def get_records_from_jsonl(file_path: dict):
+    """
+    Extract records from a JSONL file (Output file from OpenAI Batch API).
+    Args:
+        file_path (str): Path to the JSONL file.
+    Returns:
+        list: A list of records (Dictionaries) to be imported into Milvus.
+    """
     records = []
+    
     with open(file_path, 'r', encoding='utf-8') as file:
+        
         lines = file.readlines()
-        print(f" Found {len(lines)} lines in file")
+        print(f" Found {len(lines)} lines")
+        progress = 0
         for i, line in enumerate(lines):
             if i % (len(lines)//10) == 0:
-                print(f"  [{i}/{len(lines)}]")
+                progress += 10
+                print(f"Progress: {progress}%")
             try:
                 line = json.loads(line.strip())
-                
                 request_id = line.get("custom_id", "")
                 record = parse_metadata(request_id)
                 
                 chunks = json.loads(line["response"]["body"]["choices"][0]["message"]["content"])["paragraphs"]
                 for chunk in chunks:
-                    chunk_content = chunk["content"].strip()
+                    chunk_content = chunk["content"].strip()[:300]  # Limit chunk content to 300 characters
                     record["chunk"] = chunk_content
                     records.append(record.copy())
             except json.JSONDecodeError:
@@ -72,7 +94,23 @@ def prepare_records_from_jsonl(file_path: dict):
 
 
 def parse_metadata(id: str):
-    
+    """
+    Parse the metadata from a given ID string.
+    Args:
+        id (str): The ID string to parse.
+    Returns:
+        dict: A dictionary containing parsed metadata.
+    This function extracts various components from the ID string, such as:
+        - year_of_study
+        - level (e.g., 1CP, 2CP)
+        - data_type (e.g., image, text, table)
+        - semester (e.g., S1, S2)
+        - page (e.g., p1, p2)
+        - document_type (e.g., COURS, TD, TP, EXAM, INTERRO, OTHER)
+        - subject_code (the first part of the ID)
+        - title (the rest of the ID after subject_code)
+    """
+
     # get all parts
     parts = id.split("_")
     
@@ -83,7 +121,7 @@ def parse_metadata(id: str):
     doc_type_set = {"COURS", "TD", "TP", "EXAM", "INTERRO", "OTHER"}
     year_pattern = re.compile(r"^(19|20)\d{2}$")
     page_pattern = re.compile(r"^p\d+$")
-    useless_pattern = re.compile(r"^(req|i\d+|t\d+)$", re.IGNORECASE)
+    others_pattern = re.compile(r"^(req|i\d+|t\d+)$", re.IGNORECASE)
 
     meta = {
         # with default values
@@ -99,7 +137,7 @@ def parse_metadata(id: str):
 
     filtered = []
     for part in parts:
-        if useless_pattern.match(part):
+        if others_pattern.match(part):
             continue
         if meta["year_of_study"] == 2019 and year_pattern.match(part):
             meta["year_of_study"] = int(part)
@@ -133,52 +171,3 @@ def parse_metadata(id: str):
         meta["title"] = ""
 
     return meta
-
-def process(input_folder: str, output_folder: str):
-
-    writer = prepare_bulk_writer()
-
-    records = []
-    all_files = os.listdir(input_folder)
-    
-    for i, file_name in enumerate(all_files):
-        print(f"[{i+1}/{len(all_files)}]: Processing file {file_name}...")
-        if file_name.endswith(".jsonl"):
-            file_path = os.path.join(input_folder, file_name)
-            file_records = prepare_records_from_jsonl(file_path)
-            records.extend(file_records)
-            for record in file_records:
-                writer.append_row(record)
-                writer.commit()
-    
-    batch_files = writer.batch_files
-
-    print(f"Batch files created:")
-    for batch_file in batch_files:
-        print(f"- {batch_file}")
-
-    resp = import_all_bulk_data(writer, batch_files)
-    if resp:
-        print(f"Import response")
-        print(json.dumps(resp.json(), indent=4))
-        
-        print("checking import status...")
-        check_import_status(resp.json()['data']['jobId'])
-        
-    else:
-        print("No files to import.")
-    
-    
-    # save in JSON format
-    os.makedirs(output_folder, exist_ok=True)
-    output_file = os.path.join(output_folder, "1CP_2CP_Records.json")
-    with open(output_file, 'w', encoding='utf-8') as f:
-        json.dump({"rows": records}, f, ensure_ascii=False, indent=4)
-        print(f"Source data saved to {output_file}")
-        
-
-
-# Main execution
-input_folder = "/home/estin/batches/output_files"
-save_path = "/home/estin/batches/source_data_for_import"
-process(input_folder, save_path)

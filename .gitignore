@@ -28,3 +28,6 @@ test_outputs/
 # other files
 tmp.py
 sample-data
+
+# bulk writer folder
+bulk_writer

@@ -1,5 +1,5 @@
 ﻿from pymilvus import CollectionSchema, FieldSchema, DataType, Function, FunctionType
-from client import client
+from .client import client
 import os
 
 # Build Schema
@@ -24,7 +24,7 @@ schema = CollectionSchema(
 schema.add_field(
     field_name="chunk",
     datatype=DataType.VARCHAR,
-    max_length=512,
+    max_length=1024,
     description="Small piece of text from the original document",
 )
 schema.add_field(

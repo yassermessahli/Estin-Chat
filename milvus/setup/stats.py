@@ -1,4 +1,4 @@
-﻿from client import client
+﻿from .client import client
 
 def get_collection_record_count(collection_name="estin_docs"):
     """

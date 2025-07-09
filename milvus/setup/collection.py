@@ -1,5 +1,5 @@
-﻿from client import client
-from schema import schema, index_params
+﻿from .client import client
+from .schema import schema, index_params
 
 # Check if collection exists and delete it
 collection_name = "estin_docs"
