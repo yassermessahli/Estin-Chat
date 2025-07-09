@@ -29,7 +29,7 @@ load_dotenv()
 # # Initialize OpenAI client with API key from environment variables
 api_key = os.getenv("OPENAI_API_KEY")
 
-# client = OpenAI(api_key=api_key)
+client = OpenAI(api_key=api_key)
 
 def upload_file(filepath: str):
     """Uploads a single file to OpenAI."""
