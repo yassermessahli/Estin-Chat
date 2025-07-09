@@ -1,6 +1,19 @@
-﻿# ./prepare_batch.py prepare batch requests from extracted jsons for cleanup using openai Batch API.
-# Run this file from the main directory of the project
-# Use: python -m data-pipeline.utils.transform.batch_cleanup.prepare_batch <input_folder_path> <output_folder_path>
+﻿"""
+Prepare batch requests for cleanup processing
+
+Usage: prepare_batch.py <input_folder> <output_folder>
+
+Positional arguments:
+  input_folder   Path to input folder containing JSON files extracted from raw PDFs
+  output_folder  Path to output folder to store batch JSONL files for each data type
+
+Options:
+  -h, --help     show this help message and exit
+  
+NOTE:
+You should run this script as a module from the root directory of the repository as follows:
+python -m data_pipeline.utils.transform.batch_cleanup.prepare_batch <input_folder> <output_folder>
+"""
 
 from .. import text_cleanup, table_cleanup, image_cleanup
 import time

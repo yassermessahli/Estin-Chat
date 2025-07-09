@@ -1,5 +1,21 @@
-from ..pdf_loader import PDFLoader
+"""
+Extract content from all PDF files as JSON files into a folder.
 
+Usage: test_pdf_loader.py <input_folder> <output_folder>
+
+Positional arguments:
+  input_folder   Path to the folder containing PDF files
+  output_folder  Path to the folder to save JSON files
+
+Options:
+  -h, --help     show this help message and exit
+  
+NOTE:
+You should run this script as a module from the root directory of the repository as follows:
+python -m data_pipeline.utils.load.tests.test_pdf_loader <input_folder> <output_folder>
+"""
+
+from ..pdf_loader import PDFLoader
 import os
 import sys
 import json

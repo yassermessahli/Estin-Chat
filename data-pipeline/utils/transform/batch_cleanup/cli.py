@@ -1,4 +1,22 @@
-﻿# ./batching_cli.py
+﻿"""
+A CLI utility for OpenAI Batch API operations.
+
+Usage: python cli.py [OPTION] [ARGUMENT ...]
+
+Options:
+  -h, --help                                Show this help message and exit
+  --upload-folder UPLOAD_FOLDER             Path to the folder containing files to upload.
+  --upload-file UPLOAD_FILE                 Path to a single file to upload.
+  --check-batch-status CHECK_BATCH_STATUS   The ID of the batch to check.
+  --download-file-content FILE_ID DOWNLOAD_LOCATION
+                                            The ID of the file to download and the location to save it.
+  --create-batch FILE_ID [FILE_ID ...]      One or more file IDs to create batches from.
+  
+NOTE:
+You should run this script as a module from the root directory of the repository as follows:
+python -m data_pipeline.utils.transform.batch_cleanup.cli <options>
+"""
+
 from openai import OpenAI
 import os
 import glob
@@ -11,7 +29,7 @@ load_dotenv()
 # # Initialize OpenAI client with API key from environment variables
 api_key = os.getenv("OPENAI_API_KEY")
 
-client = OpenAI(api_key=api_key)
+# client = OpenAI(api_key=api_key)
 
 def upload_file(filepath: str):
     """Uploads a single file to OpenAI."""
