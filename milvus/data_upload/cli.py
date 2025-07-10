@@ -5,8 +5,7 @@ from .utils import (
     prepare_bulk_writer, 
     import_all_bulk_data, 
     check_import_status,
-    get_records_from_jsonl,
-)
+    get_records_from_jsonl)
 
 
 def get_records_from_jsonl_files(input_folder: str, output_folder: str):

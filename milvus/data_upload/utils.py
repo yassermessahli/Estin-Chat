@@ -1,4 +1,5 @@
 ﻿from pymilvus.bulk_writer import RemoteBulkWriter, BulkFileType, bulk_import, get_import_progress
+from huggingface_hub import InferenceClient
 from ..setup.schema import schema
 
 import json
@@ -6,15 +7,37 @@ import re
 import os
 import dotenv
 
+
+# Load environment variables
+
 dotenv.load_dotenv("../.env")
+
+EMBEDDING_ENDPOINT = os.getenv("TEI_ENDPOINT", None)
+EMBEDDING_API_KEY = os.getenv("TEI_API_KEY", None)
+
+MINIO_ENDPOINT = os.getenv("MINIO_HOST", None)
+MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", None)
+MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", None)
+MINIO_BUCKET_NAME = os.getenv("MINIO_BUCKET_NAME", None)
+
+MILVUS_ENDPOINT = os.getenv("MILVUS_HOST", None)
+DATABASE_NAME = os.getenv("DATABASE_NAME", None)
+COLLECTION_NAME = os.getenv("COLLECTION_NAME", None)
+
+
+# Instantiate the tei inference client
+tei_inference_client = InferenceClient(
+    base_url=EMBEDDING_ENDPOINT,
+    api_key=EMBEDDING_API_KEY,
+)
 
 def prepare_bulk_writer():
     """Prepare a RemoteBulkWriter instance for MinIO data import."""
     conn = RemoteBulkWriter.S3ConnectParam(
-        endpoint=os.getenv("MINIO_HOST"),
-        access_key=os.getenv("MINIO_ACCESS_KEY"),
-        secret_key=os.getenv("MINIO_SECRET_KEY"),
-        bucket_name=os.getenv("MINIO_BUCKET_NAME"),
+        endpoint=MINIO_ENDPOINT,
+        access_key=MINIO_ACCESS_KEY,
+        secret_key=MINIO_SECRET_KEY,
+        bucket_name=MINIO_BUCKET_NAME,
         secure=False
     )
 
@@ -36,9 +59,9 @@ def import_all_bulk_data(batch_files: list):
     """
     if batch_files:
         return bulk_import(
-            collection_name=os.getenv("COLLECTION_NAME"),
-            db_name=os.getenv("DATABASE_NAME"),
-            url=os.getenv("MILVUS_HOST"),
+            collection_name=COLLECTION_NAME,
+            db_name=DATABASE_NAME,
+            url=MILVUS_ENDPOINT,
             files=batch_files
         )
     return None
@@ -52,7 +75,7 @@ def check_import_status(job_id: str):
     """
     
     resp = get_import_progress(
-        url=os.getenv("MILVUS_HOST"),
+        url=MILVUS_ENDPOINT,
         job_id=job_id,
     )
     return json.dumps(resp.json(), indent=4)
@@ -74,8 +97,8 @@ def get_records_from_jsonl(file_path: dict):
         print(f" Found {len(lines)} lines")
         progress = 0
         for i, line in enumerate(lines):
-            if i % (len(lines)//10) == 0:
-                progress += 10
+            if i % (len(lines)//100) == 0:
+                progress += 1
                 print(f"Progress: {progress}%")
             try:
                 line = json.loads(line.strip())
@@ -84,9 +107,20 @@ def get_records_from_jsonl(file_path: dict):
                 
                 chunks = json.loads(line["response"]["body"]["choices"][0]["message"]["content"])["paragraphs"]
                 for chunk in chunks:
-                    chunk_content = chunk["content"].strip()[:300]  # Limit chunk content to 300 characters
-                    record["chunk"] = chunk_content
-                    records.append(record.copy())
+                    chunk_content = chunk["content"].strip()
+                    
+                    # Split chunk if it exceeds 300 characters
+                    if len(chunk_content) <= 300:
+                        record["chunk"] = chunk_content
+                        record["vector"] = tei_inference_client.feature_extraction(chunk_content)[0]
+                        records.append(record.copy())
+                    else:
+                        # Split into smaller chunks of max 300 characters
+                        for i in range(0, len(chunk_content), 300):
+                            tiny_chunk = chunk_content[i:i+300]
+                            record["chunk"] = tiny_chunk
+                            record["vector"] = tei_inference_client.feature_extraction(tiny_chunk)[0]
+                            records.append(record.copy())
             except json.JSONDecodeError:
                 continue
 
