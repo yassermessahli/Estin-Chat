@@ -27,9 +27,10 @@ dependencies = [
 [dependency-groups]
 rag = []
 data-pipeline = [
+    "huggingface-hub>=0.33.2",
     "ollama>=0.5.1",
     "openai>=1.93.0",
-    "pymilvus>=2.5.11",
+    "pymilvus[bulk-writer]>=2.5.11",
     "pymupdf>=1.26.1",
     "tiktoken>=0.9.0",
 ]
