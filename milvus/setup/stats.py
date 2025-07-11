@@ -1,4 +1,4 @@
-﻿from .client import client
+﻿from client import client
 
 def get_collection_record_count(collection_name="estin_docs"):
     """
@@ -30,12 +30,13 @@ def get_collection_record_count(collection_name="estin_docs"):
         print(f"Error getting collection stats: {e}")
         return 0
 
-def print_detailed_collection_stats(collection_name="estin_docs"):
+def print_random_records(collection_name="estin_docs", limit=1):
     """
-    Print detailed statistics about a Milvus collection.
+    Print random records from a Milvus collection.
     
     Args:
-        collection_name (str): Name of the collection to check
+        collection_name (str): Name of the collection to query
+        limit (int): Number of random records to display
     """
     try:
         # Check if collection exists
@@ -43,31 +44,45 @@ def print_detailed_collection_stats(collection_name="estin_docs"):
             print(f"Collection '{collection_name}' does not exist.")
             return
         
-        # Get collection statistics
-        collection_stats = client.get_collection_stats(collection_name=collection_name)
+        # Query random records
+        results = client.query(
+            collection_name=collection_name,
+            filter="",
+            output_fields=["*"],
+            limit=limit
+        )
         
-        print(f"\n=== Collection '{collection_name}' Statistics ===")
-        print(f"Total Records: {collection_stats.get('row_count', 0):,}")
-        
-        # Print all available stats
-        for key, value in collection_stats.items():
-            if key != 'row_count':  # Already printed above
-                print(f"{key.replace('_', ' ').title()}: {value}")
+        if not results:
+            print(f"No records found in collection '{collection_name}'")
+            return
+                
+        for i, record in enumerate(results, 1):
+            print(f"\nRecord {i}:")
+            for field, value in record.items():
+                # Truncate long text fields for readability
+                if field == "vector":
+                    print(f"  {field}: {type(value).__name__} with {len(value)} dimensions")
+                    continue
+                elif isinstance(value, str) and len(value) > 30:
+                    value = value[:30] + "..."
+                print(f"  {field}: {value}")
         
         print("=" * 50)
         
     except Exception as e:
-        print(f"Error getting detailed collection stats: {e}")
+        print(f"Error querying random records: {e}")
 
 def main():
     """Main function to demonstrate usage"""
     collection_name = "estin_docs"
     
+    print("="*50)
     print("Checking collection record count...")
     record_count = get_collection_record_count(collection_name)
     
-    print("\nDetailed collection statistics:")
-    print_detailed_collection_stats(collection_name)
+    print("\n" + "="*50)
+    print("Displaying random records:")
+    print_random_records(collection_name)
 
 if __name__ == "__main__":
     main()

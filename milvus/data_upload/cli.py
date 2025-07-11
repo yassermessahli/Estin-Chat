@@ -16,29 +16,34 @@ def get_records_from_jsonl_files(input_folder: str, output_folder: str):
         input_folder (str): Path to folder containing JSONL files
         output_folder (str): Path to folder where output JSON will be saved
     """
-    records = []
     all_files = os.listdir(input_folder)
     jsonl_files = [f for f in all_files if f.endswith(".jsonl")]
     
     for i, file_name in enumerate(jsonl_files):
+        
         print(f"[{i+1}/{len(jsonl_files)}]: Processing file {file_name}...")
         file_path = os.path.join(input_folder, file_name)
-        file_records = get_records_from_jsonl(file_path)
-        records.extend(file_records)
-    
-    os.makedirs(output_folder, exist_ok=True)
-    output_file = os.path.join(output_folder, "extracted_records.json")
-    with open(output_file, 'w', encoding='utf-8') as f:
-        json.dump({"rows": records}, f, ensure_ascii=False, indent=4)
-    
-    print("="*100)
-    print(f"Extracted {len(records)} records and saved to {output_file}")
+        try:
+            file_records = get_records_from_jsonl(file_path)
+            print(f"  {len(file_records)} records extracted")
+        except Exception as e:
+            print(f"  Error processing {file_name}: {e}")
+            print("  Skipping this file...")
+            continue
+        
+        # save records from this file into json file
+        if file_records:
+            os.makedirs(output_folder, exist_ok=True)
+            output_file = os.path.join(output_folder, f"{os.path.splitext(file_name)[0]}.json")
+            with open(output_file, 'w', encoding='utf-8') as f:
+                json.dump({"rows": file_records}, f, ensure_ascii=False, indent=4)
+            print(f"Saved records from {file_name} to {output_file}\n")
 
 
 def push_bulk_data(input_folder: str):
     """
     Process records and push them to MinIO using bulk writer.
-    
+
     Args:
         input_folder (str): Path to folder containing JSON files with records
     """
@@ -57,6 +62,9 @@ def push_bulk_data(input_folder: str):
             records = data.get("rows", [])
             
             for record in records:
+                if len(record.get("chunk", "")) > 300:
+                    print(f"  Skipping record with chunk length {len(record['chunk'])} > 300")
+                    continue
                 writer.append_row(record)
                 total_records += 1
     
@@ -129,7 +137,7 @@ def main():
     elif args.push_bulk_to_minio:
         push_bulk_data(args.push_bulk_to_minio)
     elif args.populate_milvus is not None:
-        populate_milvus([args.populate_milvus] if args.populate_milvus else None)
+        populate_milvus([args.populate_milvus])
     elif args.get_import_status:
         get_import_status_info(args.get_import_status)
     else:

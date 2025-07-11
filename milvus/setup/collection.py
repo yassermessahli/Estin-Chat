@@ -18,8 +18,8 @@ client.create_collection(
     auto_id=True,
     enable_dynamic_field=True,
     index_params=index_params,
-    num_partitions=128,  # balanced distribution of subject_codes across partitions
-    properties={"partitionkey.isolation": True},  # isolation for partition keys
+    num_partitions=128,
+    properties={"partitionkey.isolation": True},
 )
 
 # Verify collection
@@ -29,4 +29,3 @@ if client.has_collection(collection_name=collection_name):
     print(f"Collection stats: {collection_stats}")
 else:
     print(f"Failed to create collection '{collection_name}'. Please check the logs.")
-    

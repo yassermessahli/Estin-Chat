@@ -12,9 +12,6 @@ import dotenv
 
 dotenv.load_dotenv("../.env")
 
-EMBEDDING_ENDPOINT = os.getenv("TEI_ENDPOINT", None)
-EMBEDDING_API_KEY = os.getenv("TEI_API_KEY", None)
-
 MINIO_ENDPOINT = os.getenv("MINIO_HOST", None)
 MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", None)
 MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", None)
@@ -24,12 +21,6 @@ MILVUS_ENDPOINT = os.getenv("MILVUS_HOST", None)
 DATABASE_NAME = os.getenv("DATABASE_NAME", None)
 COLLECTION_NAME = os.getenv("COLLECTION_NAME", None)
 
-
-# Instantiate the tei inference client
-tei_inference_client = InferenceClient(
-    base_url=EMBEDDING_ENDPOINT,
-    api_key=EMBEDDING_API_KEY,
-)
 
 def prepare_bulk_writer():
     """Prepare a RemoteBulkWriter instance for MinIO data import."""
@@ -99,7 +90,7 @@ def get_records_from_jsonl(file_path: dict):
         for i, line in enumerate(lines):
             if i % (len(lines)//100) == 0:
                 progress += 1
-                print(f"Progress: {progress}%")
+                print(f"  > Progress: {progress}%")
             try:
                 line = json.loads(line.strip())
                 request_id = line.get("custom_id", "")
@@ -109,17 +100,20 @@ def get_records_from_jsonl(file_path: dict):
                 for chunk in chunks:
                     chunk_content = chunk["content"].strip()
                     
+                    # skip small chunks because they will raise problem whe generating embeddings
+                    if len(chunk_content) < 50:
+                        print(f"  Skipping chunk with length {len(chunk_content)} < 50")
+                        continue
+                    
                     # Split chunk if it exceeds 300 characters
                     if len(chunk_content) <= 300:
                         record["chunk"] = chunk_content
-                        record["vector"] = tei_inference_client.feature_extraction(chunk_content)[0]
                         records.append(record.copy())
                     else:
                         # Split into smaller chunks of max 300 characters
                         for i in range(0, len(chunk_content), 300):
                             tiny_chunk = chunk_content[i:i+300]
                             record["chunk"] = tiny_chunk
-                            record["vector"] = tei_inference_client.feature_extraction(tiny_chunk)[0]
                             records.append(record.copy())
             except json.JSONDecodeError:
                 continue

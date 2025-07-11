@@ -1,6 +1,10 @@
 ﻿from pymilvus import CollectionSchema, FieldSchema, DataType, Function, FunctionType
 from .client import client
 import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Build Schema
 # Instantiate schema
@@ -24,13 +28,13 @@ schema = CollectionSchema(
 schema.add_field(
     field_name="chunk",
     datatype=DataType.VARCHAR,
-    max_length=1024,
+    max_length=500,
     description="Small piece of text from the original document",
 )
 schema.add_field(
     field_name="vector",
     datatype=DataType.FLOAT_VECTOR,
-    dim=1024,
+    dim=768,
     description="Vector embedding of the text chunk",
 )
 schema.add_field(
@@ -72,7 +76,7 @@ schema.add_field(
     field_name="subject_code",
     datatype=DataType.VARCHAR,
     max_length=128,
-    is_partition_key=True,  # partitioning by subject_code
+    is_partition_key=True,
     description="The code of the subject (e.g., 'ELEC', 'BDD', 'AI')",
 )
 
@@ -98,7 +102,7 @@ embedding_function = Function(
     output_field_names=["vector"],
     params={
         "provider": "TEI",
-        "endpoint": os.getenv("EMBEDDING_ENDPOINT"),  # container endpoint
+        "endpoint": os.getenv("TEI_ENDPOINT"),  # container endpoint
     },
 )
 schema.add_function(embedding_function)
