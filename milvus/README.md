@@ -7,7 +7,7 @@ Quick guide to set up Milvus vector database, create collections, and efficientl
 ### 1. Run Milvus Instance
 
 ```bash
-# Start Milvus with docker compose in detached mode
+# Start Milvus with docker compose if it is not running
 cd milvus
 docker compose up -d
 ```
@@ -16,6 +16,7 @@ docker compose up -d
 
 ```bash
 # Execute from repo root - create collection
+# NOTE: do not execute this command if the collection already exists with inserted data.
 python -m milvus.setup.collection
 
 # View statistics
@@ -35,6 +36,8 @@ python -m milvus.data_upload.cli --get-records-from-jsonl <openai-batch-output-f
 python -m milvus.data_upload.cli --push-bulk-to-minio <jsons-records-folder>
 
 # 3. Import bulk data from MinIO to Milvus
+# Use the returned parquet file name from the previous step
+# (You can also specify multiple files if needed)
 python -m milvus.data_upload.cli --populate-milvus <created-parquet-files-from-minio>
 ```
 
@@ -109,8 +112,11 @@ python -m milvus.utils.verify_vectors
 
 ## Configuration
 
+Ask the administrator to provide the `.env` file with necessary environment variables.
+Or:
+
 1. Copy `.env.milvus.example` to `.env`
-2. Configure environment variables
+2. Configure environment variables yourself
 
 ## Core Files
 
