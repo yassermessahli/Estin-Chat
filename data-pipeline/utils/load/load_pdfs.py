@@ -15,7 +15,7 @@ You should run this script as a module from the root directory of the repository
 python -m data_pipeline.utils.load.tests.test_pdf_loader <input_folder> <output_folder>
 """
 
-from ..pdf_loader import PDFLoader
+from pdf_loader import PDFLoader
 import os
 import sys
 import json
@@ -44,25 +44,30 @@ def main():
     if not pdf_files:
         print(f"No PDF files found in {args.input_folder}")
         return
+    print(f"Found {nb_pdfs} PDF files")
 
     for n, filename in enumerate(pdf_files):
-        file_path = os.path.join(args.input_folder, filename)
-        print(f"[{n}/{nb_pdfs}]: Processing {filename}...")
-        start_time = time.time()
+        try:
+            file_path = os.path.join(args.input_folder, filename)
+            print(f"[{n+1}/{nb_pdfs}]: Processing {filename}...")
+            start_time = time.time()
 
-        pdf_loader = PDFLoader(file_path)
-        result = pdf_loader.analyse()
+            pdf_loader = PDFLoader(file_path)
+            result = pdf_loader.analyse()
 
-        # Generate output filename
-        output_filename = os.path.splitext(filename)[0] + ".json"
-        output_file = os.path.join(args.output_folder, output_filename)
+            # Generate output filename
+            output_filename = os.path.splitext(filename)[0] + ".json"
+            output_file = os.path.join(args.output_folder, output_filename)
 
-        # Save as json
-        with open(output_file, "w", encoding="utf-8") as f:
-            json.dump(result, f, ensure_ascii=False, indent=2)
+            # Save as json
+            with open(output_file, "w", encoding="utf-8") as f:
+                json.dump(result, f, ensure_ascii=False, indent=2)
 
-        end_time = time.time()
-        print(f"Finished in: {end_time - start_time:.2f} seconds")
+            end_time = time.time()
+            print(f"Finished in: {end_time - start_time:.2f} seconds")
+        except Exception as e:
+            print(f"Error occurred in file {filename}: {e}")
+            continue
 
     total_end_time = time.time()
     print(

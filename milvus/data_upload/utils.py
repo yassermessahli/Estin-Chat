@@ -49,12 +49,40 @@ def import_all_bulk_data(batch_files: list):
         batch_files (list): List of parquet files to be imported.
     """
     if batch_files:
-        return bulk_import(
-            collection_name=COLLECTION_NAME,
-            db_name=DATABASE_NAME,
-            url=MILVUS_ENDPOINT,
-            files=batch_files
-        )
+        # Import with retry mechanism for handling timeouts
+        import time
+        max_retries = 3
+        retry_delay = 10  # seconds
+        
+        for attempt in range(max_retries):
+            try:
+                print(f"Attempting import (attempt {attempt + 1}/{max_retries})...")
+                result = bulk_import(
+                    collection_name=COLLECTION_NAME,
+                    db_name=DATABASE_NAME,
+                    url=MILVUS_ENDPOINT,
+                    files=batch_files
+                )
+                print("Import successful!")
+                return result
+                
+            except Exception as e:
+                error_msg = str(e).lower()
+                if "timeout" in error_msg or "timed out" in error_msg:
+                    if attempt < max_retries - 1:
+                        print(f"Timeout occurred, retrying in {retry_delay} seconds...")
+                        time.sleep(retry_delay)
+                        retry_delay *= 2  # Exponential backoff
+                        continue
+                    else:
+                        print("Maximum retries reached. Import failed due to timeout.")
+                        print("The parquet file might be too large or there could be a network issue.")
+                        print("Consider breaking down the data into smaller chunks.")
+                        raise e
+                else:
+                    # Non-timeout error, don't retry
+                    raise e
+                    
     return None
 
 
@@ -113,6 +141,8 @@ def get_records_from_jsonl(file_path: dict):
                         # Split into smaller chunks of max 300 characters
                         for i in range(0, len(chunk_content), 300):
                             tiny_chunk = chunk_content[i:i+300]
+                            if len(tiny_chunk) < 75:
+                                break  # Skip very small remaining chunks 
                             record["chunk"] = tiny_chunk
                             records.append(record.copy())
             except json.JSONDecodeError:
@@ -147,9 +177,11 @@ def parse_metadata(id: str):
     data_type_set = {"image", "text", "table"}
     semester_set = {"S1", "S2"}
     doc_type_set = {"COURS", "TD", "TP", "EXAM", "INTERRO", "OTHER"}
+    specialization_set = {"IA", "CS"}
     year_pattern = re.compile(r"^(19|20)\d{2}$")
     page_pattern = re.compile(r"^p\d+$")
     others_pattern = re.compile(r"^(req|i\d+|t\d+)$", re.IGNORECASE)
+    semester_specialization_pattern = re.compile(r"^(S[12])\(([A-Z]+)\)$")
 
     meta = {
         # with default values
@@ -176,6 +208,11 @@ def parse_metadata(id: str):
         if meta["data_type"] == "" and part in data_type_set:
             meta["data_type"] = part
             continue
+        semester_spec_match = semester_specialization_pattern.match(part)
+        if semester_spec_match and meta["semester"] == "":
+            meta["semester"] = semester_spec_match.group(1)
+            meta["specialization"] = semester_spec_match.group(2)
+            continue
         if meta["semester"] == "" and part in semester_set:
             meta["semester"] = part
             continue
@@ -184,6 +221,9 @@ def parse_metadata(id: str):
             continue
         if meta["document_type"] == "" and part in doc_type_set:
             meta["document_type"] = part
+            continue
+        if part in specialization_set:
+            meta["specialization"] = part
             continue
         filtered.append(part)
 

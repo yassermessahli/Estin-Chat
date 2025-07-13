@@ -59,13 +59,13 @@ def upload_folder(folder_path: str):
         print(f"Error: Folder '{folder_path}' does not exist or is not a directory.")
         return
     
-    files = [f for f in glob.glob(os.path.join(folder_path, "*")) if os.path.isfile(f)]
+    files = [f for f in glob.glob(os.path.join(folder_path, "*")) if os.path.isfile(f) and f.lower().endswith(('.jsonl'))]
     
     if not files:
         print(f"No files found in folder: {folder_path}")
         return
     
-    print(f"Found {len(files)} files to upload.")
+    print(f"Found {len(files)} JSONL files to upload.")
     
     uploaded_files = []
     failed_files = []

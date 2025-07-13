@@ -11,7 +11,7 @@ Clean and structure raw text from a PDF for vector storage.
 5. Output only valid JSON matching the given schema.
 
 **Notes**  
-- Input may be English or French; output must be English.  
+- Input may be English or French; Output must be *English* exclusively.  
 - Preserve original meaning; no extra commentary.
 - PDF metadata (context): {context}
 
@@ -30,7 +30,7 @@ Convert a PDF‑extracted table into structured JSON for vector storage:
 5. If the table doesn't have useful data, output an empty array `[]`.
 
 **Notes**
-- Input may be English or French; output must be English.  
+- Input may be English or French; Output must be *English* exclusively.  
 - PDF metadata (context): {context}
 
 **Table Content**  

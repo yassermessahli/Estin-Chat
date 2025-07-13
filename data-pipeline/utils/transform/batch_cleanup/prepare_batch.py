@@ -60,7 +60,6 @@ def prepare_page_text_request(text: str, base_req_id: str):
             ],
             "response_format": {"type": "json_schema", "json_schema": output_schema},
             "temperature": 0.50,
-            "top_p": 1,
             "max_completion_tokens": 2024,
             "stream": False,
         },
@@ -100,7 +99,6 @@ def prepare_page_table_requests(tables: list[dict], base_req_id: str):
                     "json_schema": output_schema,
                 },
                 "temperature": 0.50,
-                "top_p": 1,
                 "max_completion_tokens": 2024,
                 "stream": False,
             },
@@ -156,7 +154,6 @@ def prepare_page_image_requests(images: list[dict], base_req_id: str):
                     "json_schema": output_schema,
                 },
                 "temperature": 0.50,
-                "top_p": 1,
                 "max_completion_tokens": 2024,
                 "stream": False,
             },
@@ -201,16 +198,22 @@ def prepare_full_batches_for_cleanup(input_folder: str, output_folder: str):
             texts_got = 0
             images_got = 0
             tables_got = 0
-            texts_skipped = 0  # Texts are not skipped, so this will be 0
+            
+            texts_skipped = 0
             tables_skipped = 0
             images_skipped = 0
+            
             file_texts_tokens = 0
             file_tables_tokens = 0
             file_images_tokens = 0
+            
             file_processing_start_time = time.time()
 
             with open(file_path, "r", encoding="utf-8") as file:
                 pages = json.load(file)
+                if len(pages) > 100:
+                    print("[WARNING]: This file has more than 100 pages, truncating it ...")
+                    pages = pages[:50]  # truncate to display a preview of the document
                 for np, p in enumerate(pages):
                     page_id = f"{file_id}_p{np+1}"
                     if p["plain_text"]:
@@ -229,13 +232,13 @@ def prepare_full_batches_for_cleanup(input_folder: str, output_folder: str):
                         tables_got += len(p["tables"])
                         tables_input_tokens += input_tokens
                         file_tables_tokens += input_tokens
-                    if p["images"]:
-                        requests, skipped, input_tokens = prepare_page_image_requests(p["images"], page_id)
-                        images_batch_requests.extend(requests)
-                        images_skipped += skipped
-                        images_got += len(p["images"])
-                        images_input_tokens += input_tokens
-                        file_images_tokens += input_tokens
+                    # if p["images"]:
+                    #     requests, skipped, input_tokens = prepare_page_image_requests(p["images"], page_id)
+                    #     images_batch_requests.extend(requests)
+                    #     images_skipped += skipped
+                    #     images_got += len(p["images"])
+                    #     images_input_tokens += input_tokens
+                    #     file_images_tokens += input_tokens
             file_processing_end_time = time.time()
             file_processing_time = file_processing_end_time - file_processing_start_time
             

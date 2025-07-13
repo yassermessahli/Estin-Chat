@@ -20,8 +20,8 @@ services:
     container_name: milvus-minio
     image: minio/minio:RELEASE.2023-03-20T20-16-18Z
     environment:
-      MINIO_ACCESS_KEY: estinadmin
-      MINIO_SECRET_KEY: zQc6+cuLDxC5H0igqul6RePHtccuAkxp
+      MINIO_ROOT_USER: estinadmin
+      MINIO_ROOT_PASSWORD: zQc6+cuLDxC5H0igqul6RePHtccuAkxp
     ports:
       - "9001:9001"
       - "9000:9000"
