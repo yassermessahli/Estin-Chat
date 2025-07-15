@@ -19,7 +19,6 @@ client.create_collection(
     enable_dynamic_field=True,
     index_params=index_params,
     num_partitions=128,
-    properties={"partitionkey.isolation": True},
 )
 
 # Verify collection
