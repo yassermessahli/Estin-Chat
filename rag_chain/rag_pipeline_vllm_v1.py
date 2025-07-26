@@ -1,8 +1,46 @@
 import os
-from pymilvus import MilvusClient
-import ollama
+import requests
 import json
 import re
+from pymilvus import MilvusClient
+
+# -------------------------------
+# vLLM API Configuration
+# -------------------------------
+VLLM_BASE_URL = "http://localhost:8000"  # Your vLLM server URL
+VLLM_MODEL_NAME = "/home/anis-bensmail/estin-chatbot/models/Qwen3-8B-GGUF/Qwen3-8B-Q4_K_M.gguf"  # Your model name
+
+def call_vllm_api(messages, max_tokens=1000, temperature=0.1):
+    """Call vLLM API for chat completions."""
+    try:
+        payload = {
+            "model": VLLM_MODEL_NAME,
+            "messages": messages,
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+            "stream": False
+        }
+        
+        response = requests.post(
+            f"{VLLM_BASE_URL}/v1/chat/completions",
+            headers={"Content-Type": "application/json"},
+            json=payload,
+            timeout=60
+        )
+        
+        if response.status_code == 200:
+            result = response.json()
+            return result["choices"][0]["message"]["content"]
+        else:
+            print(f"❌ vLLM API Error: {response.status_code} - {response.text}")
+            return None
+            
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Request Error: {e}")
+        return None
+    except Exception as e:
+        print(f"❌ Unexpected Error: {e}")
+        return None
 
 # -------------------------------
 # Milvus Setup (with auto-embedding)
@@ -14,23 +52,20 @@ MILVUS_HOST = os.getenv("MILVUS_HOST", "http://localhost:19530")
 # Connect to Milvus
 client = MilvusClient(uri=MILVUS_HOST, token="root:Milvus")
 client.use_database("core_db")
+
 # -------------------------------
 # Candidate Filter Fields
 # -------------------------------
-# FILTER_FIELDS = {
-#     "level": ["1CP"],
-#     "semester": ["S1"],
-#     "subject_code": ["ELEC"]
-# }
 FILTER_FIELDS = {
     "subject_code": [
         "ALG1", "ALG2", "ANA2", "ARCHI1", "ARCHI2", 
         "ASDS1", "ASDS2", "BW", "ELEC1", "ELECTRO1", 
         "ELECTRO2", "MEC", "SFSD"
     ],
-    "document_type": ["COURS", "EXAM", "INTERRO", "OTHER", "TD", "TP"] ,
-    "semester":["S1" , "S2"]
+    "document_type": ["COURS", "EXAM", "INTERRO", "OTHER", "TD", "TP"],
+    "semester": ["S1", "S2"]
 }
+
 # -------------------------------
 # Step 1: Use LLM to classify filter fields (Improved)
 # -------------------------------
@@ -72,14 +107,18 @@ def classify_query_filters(query: str) -> dict:
         "No explanations or extra text.\n"
     )
 
-
     try:
-        response = ollama.chat(model="qwen3:4b", messages=[
+        messages = [
             {"role": "system", "content": system_msg},
             {"role": "user", "content": f"Classify this query: '{query}'"}
-        ])
-
-        content = response["message"]["content"].strip()
+        ]
+        
+        content = call_vllm_api(messages, max_tokens=500, temperature=0.1)
+        
+        if not content:
+            raise Exception("No response from vLLM API")
+        
+        content = content.strip()
         
         # Remove any thinking tags or extra content
         content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL)
@@ -115,13 +154,12 @@ def classify_query_filters(query: str) -> dict:
                 elif isinstance(v, str) and v in FILTER_FIELDS[k]:
                     validated_result[k] = [v]  # Convert single string to list
 
-        
         print(f"✅ Successfully parsed filters: {validated_result}")
         return validated_result
         
     except Exception as e:
         print(f"[Warning] Failed to parse classification: {e}")
-        print(f"Raw content: {response['message']['content'] if 'response' in locals() else 'No response'}")
+        print(f"Raw content: {content if 'content' in locals() else 'No response'}")
         
         # Fallback: try to extract filters using keyword matching
         fallback_filters = extract_filters_fallback(query)
@@ -145,12 +183,17 @@ def extract_filters_fallback(query: str) -> dict:
     ).format(query)
     
     try:
-        response = ollama.chat(model="qwen3:4b", messages=[
+        messages = [
             {"role": "system", "content": "You are an academic classifier. Respond only with JSON."},
             {"role": "user", "content": fallback_prompt}
-        ])
+        ]
         
-        content = response["message"]["content"].strip()
+        content = call_vllm_api(messages, max_tokens=300, temperature=0.1)
+        
+        if not content:
+            raise Exception("No response from vLLM API")
+        
+        content = content.strip()
         
         # Clean up the response
         content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL)
@@ -211,7 +254,6 @@ def build_milvus_filter(filters: dict) -> str:
             conditions.append(f'{field} == "{value}"')
 
     return " and ".join(conditions)
-
 
 def retrieve_documents(query: str, filters: dict, top_k=10) -> list:
     """Search Milvus using raw query text and filters, handling OR on partition keys like subject_code."""
@@ -371,7 +413,7 @@ def retrieve_documents(query: str, filters: dict, top_k=10) -> list:
 # Step 3: Send final context to LLM (Improved)
 # -------------------------------
 def generate_answer(query: str, context_chunks: list) -> str:
-    """Use LLM (Qwen) to generate the final answer."""
+    """Use LLM (vLLM) to generate the final answer."""
     if not context_chunks:
         return "I couldn't find any relevant documents to answer your question."
     
@@ -388,7 +430,7 @@ def generate_answer(query: str, context_chunks: list) -> str:
     # Print context information with scores
     print(f"\n🧠 CONTEXT USED FOR ANSWER GENERATION:")
     print("-" * 60)
-    for i, chunk in enumerate(context_chunks[:10]):  # Show top 5 for context
+    for i, chunk in enumerate(context_chunks[:5]):  # Show top 5 for context
         if isinstance(chunk, dict):
             print(f"📄 Source {i+1}: {chunk['title']}")
             print(f"🎯 Score: {chunk['score']:.4f}")
@@ -399,20 +441,25 @@ def generate_answer(query: str, context_chunks: list) -> str:
         "You are a helpful study assistant for ESTIN engineering students. "
         "Answer the question based ONLY on the following course documents. "
         "If the documents don't contain enough information to answer the question completely, "
-        "say so and provide what information is available and mention the sources titles \n\n"
+        "say so and provide what information is available and mention the sources titles.\n\n"
         "COURSE DOCUMENTS:\n"
         f"{context_text}\n\n"
         f"STUDENT QUESTION: {query}\n\n"
-        "Please provide a clear, structured answer based on the course material above."
-        "If the Student question in french , translate the answer into french"
-        )
+        "Please provide a clear, structured answer based on the course material above. "
+        "If the Student question is in French, translate the answer into French."
+    )
 
-    
-    response = ollama.chat(model="qwen3:4b", messages=[
+    messages = [
         {"role": "system", "content": "You are a helpful academic assistant. Answer clearly and accurately based only on the provided context."},
         {"role": "user", "content": prompt}
-    ])
-    return response['message']['content']
+    ]
+    
+    response = call_vllm_api(messages, max_tokens=2000, temperature=0.2)
+    
+    if response:
+        return response
+    else:
+        return "I apologize, but I'm having trouble generating a response right now. Please try again."
 
 # -------------------------------
 # Step 4: Full RAG Chain (Improved)
@@ -466,15 +513,37 @@ def check_collection_info():
         print(f"Error checking collection: {e}")
         return False
 
+def check_vllm_connection():
+    """Check if vLLM server is accessible."""
+    try:
+        response = requests.get(f"{VLLM_BASE_URL}/health", timeout=5)
+        if response.status_code == 200:
+            print("✅ vLLM server is running and accessible")
+            return True
+        else:
+            print(f"⚠️ vLLM server responded with status {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Cannot connect to vLLM server: {e}")
+        print(f"Make sure your vLLM server is running on {VLLM_BASE_URL}")
+        return False
+
 # -------------------------------
 # CLI (Improved)
 # -------------------------------
 if __name__ == "__main__":
-    print("RAG Chatbot (Milvus + Qwen) - Improved Version with Similarity Scores")
+    print("RAG Chatbot (Milvus + vLLM) - Updated for vLLM Server")
     print("=" * 70)
     
+    # Check vLLM server connection
+    print("Checking vLLM server connection...")
+    if not check_vllm_connection():
+        print("⚠️ vLLM server connection issues detected. Please ensure your vLLM server is running.")
+        print("You can start it with: vllm serve \"./models/Qwen3-8B-GGUF/Qwen3-8B-Q4_K_M.gguf\" --max-model-len 4000")
+        exit(1)
+    
     # Check collection status
-    print("Checking collection status...")
+    print("Checking Milvus collection status...")
     if not check_collection_info():
         print("⚠️ Collection issues detected. Continuing anyway...")
     
@@ -491,7 +560,8 @@ if __name__ == "__main__":
             print("- Ask any question about your course materials")
             print("- 'exit' or 'quit' to stop")
             print("- 'help' to see this message")
-            print("- The system will now show similarity scores for retrieved documents")
+            print("- The system will show similarity scores for retrieved documents")
+            print(f"- Using vLLM server at: {VLLM_BASE_URL}")
             continue
         elif not query.strip():
             continue
