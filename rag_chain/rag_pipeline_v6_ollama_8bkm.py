@@ -38,6 +38,7 @@ FILTER_FIELDS = {
 def classify_query_filters(query: str) -> dict:
     """Let the LLM intelligently infer which filter values are relevant to the user query."""
     system_msg = (
+        "/no_think"
         "You are an intelligent academic classifier for an engineering education system.\n"
         "Your task is to analyze student queries and intelligently determine which course filters apply.\n\n"
         "If the question is in French, translate the answer in French too.\n\n"
@@ -75,7 +76,7 @@ def classify_query_filters(query: str) -> dict:
 
 
     try:
-        response = ollama.chat(model="qwen3:4b", messages=[
+        response = ollama.chat(model="sam860/qwen3:8b-Q4_K_M", messages=[
             {"role": "system", "content": system_msg},
             {"role": "user", "content": f"Classify this query: '{query}'"}
         ])
@@ -146,7 +147,7 @@ def extract_filters_fallback(query: str) -> dict:
     ).format(query)
     
     try:
-        response = ollama.chat(model="qwen3:4b", messages=[
+        response = ollama.chat(model="sam860/qwen3:8b-Q4_K_M", messages=[
             {"role": "system", "content": "You are an academic classifier. Respond only with JSON."},
             {"role": "user", "content": fallback_prompt}
         ])
@@ -397,6 +398,7 @@ def generate_answer(query: str, context_chunks: list) -> str:
             print("-" * 60)
     
     prompt = (
+        "/no_think"
         "You are a helpful study assistant for ESTIN engineering students. "
         "Answer the question based ONLY on the following course documents. "
         "If the documents don't contain enough information to answer the question completely, "
@@ -409,7 +411,7 @@ def generate_answer(query: str, context_chunks: list) -> str:
         )
 
     
-    response = ollama.chat(model="qwen3:4b", messages=[
+    response = ollama.chat(model="sam860/qwen3:8b-Q4_K_M", messages=[
         {"role": "system", "content": "You are a helpful academic assistant. Answer clearly and accurately based only on the provided context."},
         {"role": "user", "content": prompt}
     ])
