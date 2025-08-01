@@ -95,7 +95,7 @@ schema.add_field(
 
 # Add embedding function
 embedding_function = Function(
-    name="e5-embedding",
+    name="nomic-embedding",
     function_type=FunctionType.TEXTEMBEDDING,
     description="Embedding function for text chunks",
     input_field_names=["chunk"],
