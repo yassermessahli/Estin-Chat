@@ -24,7 +24,7 @@ disable-log-stats: false
 # enable-prompt-adapter: false
 
 # Enable logging of incoming requests.
-enable-log-requests: true
+no-enable-log-requests: false
 
 #------------------------------------------------------------------------------------
 # Frontend Configuration
@@ -32,7 +32,7 @@ enable-log-requests: true
 #------------------------------------------------------------------------------------
 
 # Host name to bind the server to. 'None' typically means listen on all available interfaces.
-host: None
+host: 0.0.0.0
 
 # Port number to listen on.
 port: 8000
@@ -48,16 +48,13 @@ disable-uvicorn-access-log: false
 allow-credentials: false
 
 # List of allowed origins for CORS. A value of ['*'] allows all origins.
-allowed-origins:
-  - "*"
+# allowed-origins:
 
 # List of allowed HTTP methods for CORS. A value of ['*'] allows all methods.
-allowed-methods:
-  - "*"
+# allowed-methods:
 
 # List of allowed HTTP headers for CORS. A value of ['*'] allows all headers.
-allowed-headers:
-  - "*"
+# allowed-headers:
 
 # If provided, the server will require this API key in the request header for authentication.
 api-key: kdAP+2Eq9WDCPd+vPTr7460-gxWB3kxTs*2iglsSX4wW
@@ -117,7 +114,7 @@ exclude-tools-when-tool-choice-none: false
 
 # The parser for model-generated tool calls, required for --enable-auto-tool-choice.
 # Choose from built-in parsers or register a plugin.
-tool-call-parser: None
+# tool-call-parser: None
 
 # A plugin to parse model-generated tool calls into the OpenAI API format.
 # tool-parser-plugin: ""
@@ -126,7 +123,7 @@ tool-call-parser: None
 # log-config-file: None
 
 # Maximum number of characters or token IDs to print in logs. 'None' means unlimited.
-max-log-len: None
+# max-log-len: None
 
 # Disable FastAPI's OpenAPI schema, Swagger UI, and ReDoc endpoints.
 disable-fastapi-docs: false
@@ -151,15 +148,14 @@ enable-tokenizer-info-endpoint: true
 # Name or path of the Hugging Face model to use.
 # Also used as the model_name tag in metrics if served-model-name is not set.
 model: "Qwen/Qwen3-8B-AWQ"
-
 # The type of model runner to use.
 # An instance supports only one runner type.
 # Possible choices: auto, draft, generate, pooling
-runner: "auto"
+# runner:
 
 # Convert the model using a specific adapter, often for tasks like pooling.
 # Possible choices: auto, classify, embed, none, reward
-convert: "auto"
+# convert:
 
 # [DEPRECATED] The task for the model. Used to select a model runner if multiple are supported.
 # Possible choices: auto, classify, draft, embed, embedding, generate, reward, score, transcription, None
@@ -210,10 +206,10 @@ dtype: "auto"
 
 # Model context length. If unspecified, it's derived from the model config.
 # Supports human-readable formats like 1k, 1K, 25.6k.
-max-model-len: "8k"
+max-model-len: 3072
 
 # Method for quantizing weights. If None, checks quantization_config in the model config file.
-quantization: None
+# quantization: None
 
 # If True, disables CUDA graph and forces the model to run in PyTorch's eager mode.
 enforce-eager: false
@@ -241,7 +237,7 @@ skip-tokenizer-init: false
 enable-prompt-embeds: false
 
 # The model name(s) to be used in the API and metrics.
-served-model-name: None
+# served-model-name: None
 
 # Disable asynchronous output processing, which may reduce performance.
 disable-async-output-proc: false
@@ -254,7 +250,7 @@ disable-async-output-proc: false
 config-format: "auto"
 
 # Token for HTTP bearer authorization for remote files. Can be a token string or 'True' to use the cached token.
-hf-token: None
+# hf-token: None
 
 # Dictionary of arguments to forward to the Hugging Face config or a callable to update it.
 # hf-overrides: {}
@@ -441,7 +437,7 @@ block-size: 32
 
 # Fraction of GPU memory to be used for the model executor (0 to 1).
 # This is a per-instance limit.
-gpu-memory-utilization: 0.9
+gpu-memory-utilization: 0.95
 
 # Size of the CPU swap space per GPU in GiB.
 swap-space: 4
@@ -559,14 +555,14 @@ kv-cache-dtype: "auto"
 
 # Enable deprecated Prometheus metrics hidden since a specific version.
 # Example: --show-hidden-metrics-for-version=0.7.0
-show-hidden-metrics-for-version: None
+# show-hidden-metrics-for-version: None
 
 # Target URL for sending OpenTelemetry traces.
-otlp-traces-endpoint: None
+# otlp-traces-endpoint: None
 
 # Collect detailed (and potentially costly) traces for specified modules.
 # Possible choices: all, model, worker, None
-collect-detailed-traces: None
+# collect-detailed-traces: None
 
 #------------------------------------------------------------------------------------
 # SchedulerConfig
@@ -578,7 +574,6 @@ max-num-batched-tokens: 4096
 
 # Maximum number of sequences to be processed in a single iteration/batch.
 max-num-seqs: 16
-
 # Max number of sequences that can be concurrently partially prefilled.
 # max-num-partial-prefills: 1
 
@@ -611,10 +606,10 @@ max-num-seqs: 16
 # "fcfs": First-come, first-served.
 # "priority": Based on request priority.
 # Possible choices: fcfs, priority
-scheduling-policy: "fcfs"
+# scheduling-policy: "fcfs"
 
 # If True, prefill requests can be chunked.
-enable-chunked-prefill: true
+# enable-chunked-prefill: true
 
 # If True, do not partially schedule a multimodal item during chunked prefill (V1 only).
 # disable-chunked-mm-input: false
@@ -626,7 +621,7 @@ enable-chunked-prefill: true
 # disable-hybrid-kv-cache-manager: false
 
 # [EXPERIMENTAL] If True, perform asynchronous scheduling to potentially reduce CPU overhead.
-async-scheduling: true
+# async-scheduling: true
 #------------------------------------------------------------------------------------
 # VllmConfig
 # Top-level dataclass for all vLLM-related configurations.

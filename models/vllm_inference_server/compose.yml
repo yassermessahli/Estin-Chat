@@ -19,10 +19,12 @@ services:
     # Mount the host's Hugging Face cache to the container,
     # so the model is not re-downloaded every time.
     volumes:
+      # This allows the container to access pre-downloaded models and datasets.
       - ${DOCKER_VOLUME_DIRECTORY}:${VLLM_CACHE_ROOT}/huggingface
+
       # Mount the configuration files to be used inside the container.
       # The vllm-config.yaml file contains CLI arguments.
-      - ${CONFIG_FILE_DIRECTORY}/vllm-config.yaml:${VLLM_CONFIG_ROOT}/config.yaml
+      - ${CONFIG_FILE_DIRECTORY}/vllm-config.yaml:/vllm-config.yaml
     # Expose the API server port.
     ports:
       - "${DOCKER_HOST_PORT}:8000"
@@ -30,8 +32,9 @@ services:
     ipc: host
     # Load environment variables from the .env file.
     env_file:
-      - .vllm.env
-
-networks:
-  default:
-    name: vllm_network
+      - ./.vllm.env
+    # Override the default entrypoint to use 'vllm serve' and run with config file.
+    command:
+      - serve
+      - --config
+      - /vllm-config.yaml
