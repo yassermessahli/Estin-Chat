@@ -1,6 +1,19 @@
-﻿# ./prepare_batch.py prepare batch requests from extracted jsons for cleanup using openai Batch API.
-# Run this file from the main directory of the project
-# Use: python -m data-pipeline.utils.transform.batch_cleanup.prepare_batch <input_folder_path> <output_folder_path>
+﻿"""
+Prepare batch requests for cleanup processing
+
+Usage: prepare_batch.py <input_folder> <output_folder>
+
+Positional arguments:
+  input_folder   Path to input folder containing JSON files extracted from raw PDFs
+  output_folder  Path to output folder to store batch JSONL files for each data type
+
+Options:
+  -h, --help     show this help message and exit
+  
+NOTE:
+You should run this script as a module from the root directory of the repository as follows:
+python -m data_pipeline.utils.transform.batch_cleanup.prepare_batch <input_folder> <output_folder>
+"""
 
 from .. import text_cleanup, table_cleanup, image_cleanup
 import time
@@ -47,7 +60,6 @@ def prepare_page_text_request(text: str, base_req_id: str):
             ],
             "response_format": {"type": "json_schema", "json_schema": output_schema},
             "temperature": 0.50,
-            "top_p": 1,
             "max_completion_tokens": 2024,
             "stream": False,
         },
@@ -87,7 +99,6 @@ def prepare_page_table_requests(tables: list[dict], base_req_id: str):
                     "json_schema": output_schema,
                 },
                 "temperature": 0.50,
-                "top_p": 1,
                 "max_completion_tokens": 2024,
                 "stream": False,
             },
@@ -143,7 +154,6 @@ def prepare_page_image_requests(images: list[dict], base_req_id: str):
                     "json_schema": output_schema,
                 },
                 "temperature": 0.50,
-                "top_p": 1,
                 "max_completion_tokens": 2024,
                 "stream": False,
             },
@@ -188,16 +198,22 @@ def prepare_full_batches_for_cleanup(input_folder: str, output_folder: str):
             texts_got = 0
             images_got = 0
             tables_got = 0
-            texts_skipped = 0  # Texts are not skipped, so this will be 0
+            
+            texts_skipped = 0
             tables_skipped = 0
             images_skipped = 0
+            
             file_texts_tokens = 0
             file_tables_tokens = 0
             file_images_tokens = 0
+            
             file_processing_start_time = time.time()
 
             with open(file_path, "r", encoding="utf-8") as file:
                 pages = json.load(file)
+                if len(pages) > 100:
+                    print("[WARNING]: This file has more than 100 pages, truncating it ...")
+                    pages = pages[:50]  # truncate to display a preview of the document
                 for np, p in enumerate(pages):
                     page_id = f"{file_id}_p{np+1}"
                     if p["plain_text"]:
@@ -216,17 +232,17 @@ def prepare_full_batches_for_cleanup(input_folder: str, output_folder: str):
                         tables_got += len(p["tables"])
                         tables_input_tokens += input_tokens
                         file_tables_tokens += input_tokens
-                    if p["images"]:
-                        requests, skipped, input_tokens = prepare_page_image_requests(p["images"], page_id)
-                        images_batch_requests.extend(requests)
-                        images_skipped += skipped
-                        images_got += len(p["images"])
-                        images_input_tokens += input_tokens
-                        file_images_tokens += input_tokens
+                    # if p["images"]:
+                    #     requests, skipped, input_tokens = prepare_page_image_requests(p["images"], page_id)
+                    #     images_batch_requests.extend(requests)
+                    #     images_skipped += skipped
+                    #     images_got += len(p["images"])
+                    #     images_input_tokens += input_tokens
+                    #     file_images_tokens += input_tokens
             file_processing_end_time = time.time()
             file_processing_time = file_processing_end_time - file_processing_start_time
             
-            # ---------------- Start of new table printing logic -------------------------
+            # ----------------------- Start of new table printing logic -----------------------------
             print(f"[{nf+1}/{fl}]: {f} processed in {file_processing_time:.3f}s")
             
             header = f"| {'Type':<8} | {'Got':>10} | {'Processed':>10} | {'Skipped':>10} | {'Input Tokens':>15} |"
@@ -256,7 +272,7 @@ def prepare_full_batches_for_cleanup(input_folder: str, output_folder: str):
             
             print(separator)
             print() # for a blank line after the table
-            # ----------------- End of new table printing logic --------------------------
+            # ------------------------- End of new table printing logic ----------------------------
 
     # save each batch to a jsonl file
     if texts_batch_requests:
@@ -279,17 +295,22 @@ def prepare_full_batches_for_cleanup(input_folder: str, output_folder: str):
 
     global_end_time = time.time()
     global_processing_time = global_end_time - global_start_time
+    nb_texts_requests = len(texts_batch_requests)
+    nb_tables_requests = len(tables_batch_requests)
+    nb_images_requests = len(images_batch_requests)
     # print summary
     print("="*100, "Processing completed.", "="*100, sep="\n")
-    print(f"Total processing time: {global_processing_time:.3f}s")
     print("Statistics:")
-    print(f"\t- Text requests: {len(texts_batch_requests)}")
-    print(f"\t- Table requests: {len(tables_batch_requests)}")
-    print(f"\t- Image requests: {len(images_batch_requests)}")
+    print(f"\tTotal files processed: {len(json_files)}")
+    print(f"\tTotal processing time: {global_processing_time:.3f}s")
+    print(f"\tTexts: {nb_texts_requests} requests | {texts_input_tokens} input tokens")
+    print(f"\tTables: {nb_tables_requests} requests | {tables_input_tokens} input tokens")
+    print(f"\tImages: {nb_images_requests} requests | {images_input_tokens} text input tokens")
     print(
-        f"\t- Total requests: {len(texts_batch_requests) + len(tables_batch_requests) + len(images_batch_requests)}"
+        f"\tTotal: {nb_texts_requests + nb_tables_requests + nb_images_requests} requests | ",
+        f"{texts_input_tokens + tables_input_tokens + images_input_tokens} input tokens",
+        sep=""
     )
-    print(f"\t- Total input tokens: {texts_input_tokens + tables_input_tokens + images_input_tokens}")
     print("="*100)
 
 
