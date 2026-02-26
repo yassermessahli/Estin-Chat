@@ -24,9 +24,7 @@ if client.has_collection(collection_name=collection_name):
 schema = MilvusClient.create_schema()
 
 # Add fields to schema
-schema.add_field(
-    field_name="id", datatype=DataType.INT64, is_primary=True, auto_id=True
-)
+schema.add_field(field_name="id", datatype=DataType.INT64, is_primary=True, auto_id=True)
 schema.add_field(field_name="chunk", datatype=DataType.VARCHAR, max_length=512)
 schema.add_field(field_name="vector", datatype=DataType.FLOAT_VECTOR, dim=1024)
 schema.add_field(field_name="level", datatype=DataType.VARCHAR, max_length=3)
@@ -72,9 +70,7 @@ schema.add_function(embedding_function)
 index_params = client.prepare_index_params()
 
 
-index_params.add_index(
-    field_name="title", index_type="AUTOINDEX"
-)  # Auto index for title field
+index_params.add_index(field_name="title", index_type="AUTOINDEX")  # Auto index for title field
 
 index_params.add_index(
     field_name="vector",
