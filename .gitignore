@@ -31,3 +31,5 @@ sample-data
 
 # bulk writer folder
 bulk_writer
+
+models/ollama_inference_server/*
